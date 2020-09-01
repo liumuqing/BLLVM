@@ -1,0 +1,10 @@
+[submodule "binaryninja-api"]
+	path = binaryninja-api
+	url = https://github.com/Vector35/binaryninja-api
+	branch = master
+[submodule "3rd_party/argparse"]
+	path = 3rd_party/argparse
+	url = https://github.com/p-ranav/argparse
+[submodule "3rd_party/plog"]
+	path = 3rd_party/plog
+	url = https://github.com/SergiusTheBest/plog

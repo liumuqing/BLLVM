@@ -1,0 +1,8 @@
+*.swp
+*.swo
+*.o
+*.bndb
+*.idb
+**/.d/**
+.vscode
+bin/**/*
