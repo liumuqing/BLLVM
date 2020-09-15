@@ -8,11 +8,13 @@
 class Module;
 class Function;
 class BasicBlock:
-	public Value,
-	public AddressedWithParentMixin<Module, Function>
+	virtual public Value,
+	//public AddressedMixin<BasicBlock>,
+	virtual public AddressedWithParentMixin<Function, BasicBlock>
 {
 	using Self = BasicBlock;
 public:
+	/*
 	static inline std::shared_ptr<BasicBlock> create() {
 		std::shared_ptr<BasicBlock> retv = std::shared_ptr<BasicBlock>(new BasicBlock());
 		return retv;
@@ -32,7 +34,10 @@ public:
 		Function * p = parent.lock().get();
 		return create(p, address);
 	}
+	*/
 	virtual ~BasicBlock() {};
+	friend class AddressedMixin<BasicBlock>;
+	friend class AddressedWithParentMixin<Function, BasicBlock>;
 protected:
 	BasicBlock() {};
 	BasicBlock(const Function&) = delete;

@@ -1,33 +1,35 @@
 #include <memory>
 #include <gtest/gtest.h>
 #include "IR/AddressedItem.hpp"
+#include "IR/Module.hpp"
 #include "IR/Function.hpp"
 #include "IR/BasicBlock.hpp"
 
 class IRAddressedTestSuit: public testing::Test {
 protected:
 	void SetUp() override {
+		module = std::make_shared<Module>();
+		function = Function::create(module, 0x1000);
 	}
 	void TearDown() override {
 	}
+	std::shared_ptr<Module> module;
+	std::shared_ptr<Function> function;
 };
 
 TEST_F(IRAddressedTestSuit, test_bbl_constructor) {
-	auto bbl1 = BasicBlock::create(0x1234);
+	auto bbl1 = BasicBlock::create(function, 0x1234);
 	ASSERT_EQ(bbl1->getAddress(), 0x1234);
 }
 TEST_F(IRAddressedTestSuit, test_1) {
-	auto func1 = std::make_shared<Function>();
 
 	auto bbl3 = BasicBlock::create();
-	auto bbl2 = BasicBlock::create(0x2000);
-	func1->addAddressedItem(bbl2);
-	auto bbl1 = BasicBlock::create(func1, 0x1000);
-
-	func1->addAddressedItem(0x3000, bbl3);
+	auto bbl2 = BasicBlock::create(function, 0x2000);
+	auto bbl1 = BasicBlock::create(function, 0x1000);
+	function->addAddressedItem(0x3000, bbl3);
 
 	int index = 0;
-	for (auto bbl : func1->children()) {
+	for (auto bbl : function->children()) {
 		EXPECT_EQ(bbl->getAddress(), (index+1) * 0x1000);
 		index += 1;
 	}

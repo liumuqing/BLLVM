@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 
+#include "IR/Value.hpp"
 #include "common.hpp"
 
 template <typename T>
@@ -10,22 +11,20 @@ class AddressedConatinerMixin {
 	using Container = std::map<uaddr_t, std::shared_ptr<T>>;
 
 public:
+	T * getItemByAddress(uaddr_t addr) {
+		auto it = _container.find(addr);
+		assert(it != _container.end());
+		return it->second.get();
+	}
 	std::shared_ptr<T> popItemByAddress(uaddr_t addr) {
 		auto node_handle = _container.extract(addr);
 		assert(not node_handle.empty());
-		return node_handle.value();
+		auto retv = node_handle.mapped();
+		retv->setParent(nullptr);
+		return retv;
 	}
 
-	void addAddressedItem(uaddr_t address, std::shared_ptr<T> value) {
-		assert(value);
-		if (value->hasSetAddress()) {
-			assert(value->getAddress() == address);
-		}
-		else {
-			value->setAddress(address);
-		}
-		addAddressedItem(value);
-	}
+	void addAddressedItem(uaddr_t address, std::shared_ptr<T> value);
 	void addAddressedItem(std::shared_ptr<T> value) {
 		// value is not nullptr and _container don't have same item
 		assert(value && _container.find(value->getAddress()) == _container.end());
@@ -43,14 +42,22 @@ public:
 protected:
 	Container _container;
 };
-
+template <typename T>
 class AddressedMixin {
 public:
+	static inline std::shared_ptr<T> create() {
+		std::shared_ptr<T> retv = std::shared_ptr<T>(new T());
+		return retv;
+	}
+	static inline std::shared_ptr<T> create(uaddr_t address) {
+		auto retv = create();
+		retv->setAddress(address);
+		return retv;
+	}
 	bool hasSetAddress() const {
 		return this->address_.has_value();
 	}
-	void setAddress(uaddr_t addr) {
-		*this->address_ = addr;
+	virtual void setAddress(uaddr_t addr) {
 		this->address_ = std::make_optional(addr);
 		assert(this->address_.has_value());
 	}
@@ -65,16 +72,53 @@ protected:
 };
 
 template <typename Parent, typename T>
-class AddressedWithParentMixin : public AddressedMixin {
-
+class AddressedWithParentMixin: virtual public AddressedMixin<T>, virtual public Value {
 public:
+	static inline std::shared_ptr<T> create() {
+		std::shared_ptr<T> retv = std::shared_ptr<T>(new T());
+		return retv;
+	}
+	static inline std::shared_ptr<T> create(uaddr_t address) {
+		auto retv = create();
+		retv->setAddress(address);
+		return retv;
+	}
+	virtual void setAddress(uaddr_t addr) override;
+	static inline std::shared_ptr<T> create(Parent *parent, uaddr_t address) {
+		auto retv = create(address);
+		parent->addAddressedItem(retv);
+		return retv;
+	}
+	static inline std::shared_ptr<T> create(std::weak_ptr<Parent> parent, uaddr_t address) {
+		Parent * p = parent.lock().get();
+		return create(p, address);
+	}
+
 	AddressedWithParentMixin() {};
 	AddressedWithParentMixin(const AddressedWithParentMixin&) = delete;
 	AddressedWithParentMixin(AddressedWithParentMixin&& other) {
-		this->parent_ = other->parent_;
-		this->address_ = other->address_;
-		other->parent_ = nullptr;
-		other->address_ = 0;
+		this->parent_ = other.parent_;
+		this->address_ = other.address_;
+		other.parent_ = nullptr;
+		other.address_ = 0;
+	}
+
+	void setParent(Parent * parent) {
+		std::shared_ptr<T> self = std::dynamic_pointer_cast<T>(shared_from_this());
+		assert(self);
+		if (this->parent_) {
+			auto self = this->parent_->popItemByAddress(this->getAddress());
+			assert(self.get() == this);
+		}
+
+		this->parent_ = parent;
+		if (parent)
+			parent->addAddressedItem(self);
+	}
+
+	Parent * getParent() {
+		assert(not this->parent_);
+		return this->parent_;
 	}
 
 	std::shared_ptr<T> removeFromParent() {

@@ -4,8 +4,8 @@ OBJDIR := ./obj
 CC = clang
 CXX = clang++
 
-CPPSRCS = $(shell find . -name "*.cpp" | grep -v "test/")
-CSRCS = $(shell find . -name "*.c" | grep -v "test/")
+CPPSRCS = $(shell find . -name "*.cpp" | grep -v "test/" | grep -v "blob/")
+CSRCS = $(shell find . -name "*.c" | grep -v "test/" | grep -v "blob/")
 
 TEST_CPPSRCS = $(shell find ./test/ -name "*.cpp")
 SRCS = $(CPPSRCS) $(CSRCS)

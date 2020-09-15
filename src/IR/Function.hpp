@@ -1,21 +1,17 @@
 #pragma once
+//#include "IR/Module.hpp"
 #include "IR/Value.hpp"
 #include "IR/AddressedItem.hpp"
 #include "common.hpp"
 class Module;
 class BasicBlock;
 class Function:
-	public Value,
-	public AddressedWithParentMixin<Module, Function>,
-	public AddressedConatinerMixin<BasicBlock>
+	virtual public Value,
+	//public AddressedMixin<Function>,
+	virtual public AddressedWithParentMixin<Module, Function>,
+	virtual public AddressedConatinerMixin<BasicBlock>
 {
 public:
-	Function() {}
-	Function(uaddr_t address) {
-		setAddress(address);
-	}
-
-	Function(const Function&) = delete;
 	virtual ~Function() {};
 
 	uaddr_t getStart() const {
@@ -24,4 +20,9 @@ public:
 	void setStart(uaddr_t addr) {
 		setAddress(addr);
 	}
+protected:
+	Function() {}
+	Function(const Function&) = delete;
+friend class AddressedMixin<Function>;
+friend class AddressedWithParentMixin<Module, Function>;
 };

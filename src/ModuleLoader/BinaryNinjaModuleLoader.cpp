@@ -7,12 +7,16 @@
 
 #include <plog/Log.h>
 
+#include "IR/Function.hpp"
+#include "IR/BasicBlock.hpp"
+
 std::atomic<int> BinaryNinjaModuleLoader::instance_count;
 
 BinaryNinjaModuleLoader::BinaryNinjaModuleLoader() {
 	binary_reader = nullptr;
 	binary_view = nullptr;
 	binary_data_view = nullptr;
+
 	if (instance_count.fetch_add(1) == 0) {
 		//If this is the first instance
 		BinaryNinja::SetBundledPluginDirectory("/opt/binaryninja/plugins/");
@@ -95,9 +99,33 @@ std::optional<std::string> BinaryNinjaModuleLoader::getSymbolNameAt(uaddr_t addr
 	return symbol->GetFullName();
 }
 
+bool lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
+	auto function = Function::create(module, ssa_form->GetFunction()->GetStart());
+
+	for (auto ssa_bbl: ssa_form->GetBasicBlocks()) {
+		auto bbl = BasicBlock::create(function, ssa_bbl->GetStart());
+	}
+
+	return true;
+}
+
 std::shared_ptr<Module> BinaryNinjaModuleLoader::lift() {
+	std::shared_ptr<Module> module = std::make_shared<Module>();
 	for (auto function: binary_view->GetAnalysisFunctionList()) {
+		auto mlil = function->GetMediumLevelILIfAvailable();
+		if (!mlil) {
+			LOG_INFO << "lifting function " << std::hex << function->GetStart() << "failed, skip";
+			continue;
+		}
+		auto ssa_form = mlil->GetSSAForm();
+		if (!ssa_form) {
+			LOG_INFO << "lifting function " << std::hex << function->GetStart() << " to ssa_form failed, skip";
+			continue;
+		}
+
+		lift_function(module.get(), ssa_form);
+
 		LOG_DEBUG << "lifting function " << std::hex << function->GetStart();
 	}
-	return nullptr;
+	return module;
 }

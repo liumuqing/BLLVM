@@ -39,3 +39,28 @@ TEST_F(BinaryNinjaModuleLoaderTestSuit_SLOW, getByte) {
 TEST_F(BinaryNinjaModuleLoaderTestSuit_SLOW, getSymbolNameAt) {
 	ASSERT_STRCASEEQ(binary_module_loader->getSymbolNameAt(0x1C002E068).value_or("").c_str(), "NmrProviderDetachClientComplete@IAT");
 }
+
+class BinaryNinjaModuleLoaderTestSuit: public testing::Test {
+protected:
+	static void SetUpTestSuite() {
+		binary_module_loader.reset(new BinaryNinjaModuleLoader());
+		binary_module_loader->open("./blob/simple_binary_1/main");
+	}
+	static void TearDownTestSuite() {
+		//binary_module_loader.release();
+	}
+	void SetUp() override {
+	}
+	void TearDown() override {
+	}
+	static std::unique_ptr<BinaryNinjaModuleLoader> binary_module_loader;
+};
+std::unique_ptr<BinaryNinjaModuleLoader> BinaryNinjaModuleLoaderTestSuit::binary_module_loader = nullptr;
+
+TEST_F(BinaryNinjaModuleLoaderTestSuit, test_lift) {
+	auto module = binary_module_loader->lift();
+	auto __do_global_dtors_aux = module->getItemByAddress(0x1000);
+	ASSERT_NE(__do_global_dtors_aux, nullptr);
+
+
+}
