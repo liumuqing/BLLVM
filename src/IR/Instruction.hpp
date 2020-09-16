@@ -62,9 +62,17 @@ public:
 			this->appendOperands(remainingOperands...);
 		}
 	}
+	BasicBlock * getParent() const {
+		return parent_;
+	}
+	void removeFromParent() {
+	}
 protected:
 	Instruction():opcode_(UNDEF){};
 private:
 	Opcode opcode_;
+	BasicBlock * parent_ = nullptr;
 	void appendOperands() const {}
+
+	friend class BasicBlock;
 };
