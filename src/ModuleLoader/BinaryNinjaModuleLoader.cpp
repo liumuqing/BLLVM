@@ -98,14 +98,22 @@ std::optional<std::string> BinaryNinjaModuleLoader::getSymbolNameAt(uaddr_t addr
 	if (!symbol) return {};
 	return symbol->GetFullName();
 }
+bool lift_bbl(Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
+	auto bbl = BasicBlock::create(ssa_bbl->GetStart());
 
+
+	function->addAddressedItem(bbl);
+	return true;
+}
 bool lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
-	auto function = Function::create(module, ssa_form->GetFunction()->GetStart());
+	auto function = Function::create(ssa_form->GetFunction()->GetStart());
 
 	for (auto ssa_bbl: ssa_form->GetBasicBlocks()) {
-		auto bbl = BasicBlock::create(function, ssa_bbl->GetStart());
+		if (not lift_bbl(function.get(), ssa_bbl)) {
+			return false;
+		}
 	}
-
+	module->addAddressedItem(function);
 	return true;
 }
 

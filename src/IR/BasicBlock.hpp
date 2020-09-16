@@ -1,18 +1,23 @@
 #pragma once
 #include <memory>
 
-#include "IR/Value.hpp"
-#include "IR/Function.hpp"
 #include "AddressedItem.hpp"
 #include "common.hpp"
+#include "IR/Value.hpp"
+#include "IR/Function.hpp"
+#include "IR/Instruction.hpp"
+
+#include <list>
 class Module;
 class Function;
+class Instruction;
 class BasicBlock:
 	virtual public Value,
 	//public AddressedMixin<BasicBlock>,
 	virtual public AddressedWithParentMixin<Function, BasicBlock>
 {
 	using Self = BasicBlock;
+	using Conatiner = std::list<std::shared_ptr<Instruction>>;
 public:
 	/*
 	static inline std::shared_ptr<BasicBlock> create() {

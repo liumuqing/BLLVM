@@ -8,8 +8,9 @@
 
 #include "IR/Use.hpp"
 
-class User : Value {
+class User : virtual public Value {
 public:
+	User(): operands() {}
 	virtual void replaceUsesOfWith(Value *From, Value *To) {
 		for (auto i = 0; i < getNumOperands(); i++) {
 
@@ -41,4 +42,7 @@ public:
 	virtual ~User(){}
 protected:
 	std::vector<Use> operands;
+private:
+	User(const User&) = delete;
+	User(const User&&) = delete;
 };

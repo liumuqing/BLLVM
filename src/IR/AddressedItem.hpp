@@ -138,3 +138,7 @@ protected:
 	Parent * parent_ = nullptr;
 
 };
+
+extern template class AddressedWithParentMixin<class Function, class BasicBlock>;
+extern template class AddressedWithParentMixin<class Module, class Function>;
+extern template class AddressedConatinerMixin<class BasicBlock>;
