@@ -104,7 +104,7 @@ std::optional<std::string> BinaryNinjaModuleLoader::getSymbolNameAt(uaddr_t addr
 BasicBlock* liftBasicBlock(Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
 	auto bbl = BasicBlock::create(ssa_bbl->GetStart());
 
-	function->addAddressedItem(bbl);
+	function->push_back(bbl);
 	return bbl.get();
 }
 
@@ -116,7 +116,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			return nullptr;
 		}
 	}
-	module->addAddressedItem(function);
+	module->push_back(function);
 	return function.get();
 }
 

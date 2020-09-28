@@ -9,7 +9,7 @@
 #include "common.hpp"
 class Function;
 class Module : public Value,
-	public AddressedConatinerMixin<Module, Function>
+	public AddressableListConatiner<Function>
 {
 	using Containter = std::map<uaddr_t, std::shared_ptr<Function>>;
 
@@ -19,12 +19,12 @@ public:
 		addFunction(addr, std::dynamic_pointer_cast<Function>(function->shared_from_this()));
 	}
 	void addFunction(uaddr_t addr, std::shared_ptr<Function> function) {
-		addAddressedItem(addr, function);
+		push_back(function);
 	}
 	void removeFunction(Function * function) {
-		assert(function);
-		assert(function->hasSetAddress());
-		assert(function->getParent() == this);
+		FATAL_UNLESS(function);
+		FATAL_UNLESS(function->hasSetAddress());
+		FATAL_UNLESS(function->getParent() == this);
 		popItemByAddress(function->getAddress());
 	}
 };

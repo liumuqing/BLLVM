@@ -26,7 +26,8 @@ TEST_F(IRAddressedTestSuit, test_1) {
 	auto bbl3 = BasicBlock::create();
 	auto bbl2 = BasicBlock::create(function, 0x2000);
 	auto bbl1 = BasicBlock::create(function, 0x1000);
-	function->addAddressedItem(0x3000, bbl3);
+	bbl3->setAddress(0x3000);
+	function->push_back(bbl3);
 
 	int index = 0;
 	for (auto bbl : *function) {

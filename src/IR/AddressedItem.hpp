@@ -10,72 +10,80 @@
 #include "IR/Value.hpp"
 #include "common.hpp"
 
-template <typename Self, typename T> class ListConatiner;
-template <typename Self, typename T> class AddressedConatinerMixin;
-template <typename Self, typename Parent> class HasParentMixin;
-template <typename Self, typename Parent> class AddressedWithParentMixin;
+template <typename T> class ListConatiner;
+template <typename T> class AddressableListConatiner;
+template <typename Self, typename Parent> class ListContainerItem;
+template <typename Self, typename Parent> class AddressableListContainerItem;
 
 
-template <typename Self>
-class HasParentBaseMixin {
+template <typename Self, typename Parent>
+class ListContainerItem {
 public:
-	HasParentBaseMixin(): parent_({}) {}
-	Value * getParent() const {
+	static inline std::shared_ptr<Self> create() {
+		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
+		FATAL_UNLESS(retv);
+		return retv;
+	}
+	static inline std::shared_ptr<Self> create(Parent* parent) {
+		auto retv = create();
+		parent->push_back(retv);
+		return retv;
+	}
+	ListContainerItem(): parent_({}) {}
+	Parent * getParent() const {
 		if (not this->parent_.has_value()) {
 			return nullptr;
 		}
-		assert(this->parent_.has_value());
-		assert(not this->parent_.value().expired());
+		FATAL_UNLESS(this->parent_.has_value());
+		FATAL_UNLESS(not this->parent_.value().expired());
 		return this->parent_.value().lock().get();
 	}
-
-private:
-	HasParentBaseMixin(const HasParentBaseMixin&) = delete;
-	HasParentBaseMixin(HasParentBaseMixin&&) = delete;
-	std::optional<std::weak_ptr<Value>> parent_;
-
-protected:
-	void setParent(Value * parent) {
-		assert(not this->parent_.has_value());
-		this->parent_ = parent->weak_from_this();
+	typename std::list<std::shared_ptr<Self>>::iterator getIterInParent() const {
+		FATAL_UNLESS(iter_->get() == this);
+		return iter_;
 	}
-template <typename C, typename S>
-friend class ListConatiner;
-};
-
-template <typename Self, typename Parent>
-class HasParentMixin: protected HasParentBaseMixin<Self> {
-	using Base = HasParentBaseMixin<Self>;
-public:
-	HasParentMixin(): Base() {}
-	Parent * getParent() const {
-		auto parent = Base::getParent();
-		auto retv = dynamic_cast<Parent*>(parent);
-
-		// make sure the cast success
-		assert(not((!retv) && (parent)));
-
+	std::shared_ptr<Self> removeFromParent() {
+		FATAL_UNLESS(this->getParent());
+		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
 		return retv;
 	}
 
-private:
-	HasParentMixin(const HasParentMixin&) = delete;
-	HasParentMixin(HasParentMixin&&) = delete;
 
-protected:
-	void setParent(Parent * parent) {
-		return Base::setParent(parent);
+private:
+	ListContainerItem(const ListContainerItem&) = delete;
+	ListContainerItem(ListContainerItem&&) = delete;
+	std::optional<std::weak_ptr<Parent>> parent_;
+	typename std::list<std::shared_ptr<Self>>::iterator iter_;
+
+	//this method must be private...
+	//this method only used by ListConatiner
+	void setParent(std::nullptr_t parent) {
+		this->parent_ = std::nullopt;
 	}
-template <typename S, typename C>
+	void setParent(Parent * parent) {
+		if (parent == nullptr) {
+			this->parent_ = std::nullopt;
+			return;
+		}
+		FATAL_UNLESS(not this->parent_.has_value());
+		this->parent_ = std::dynamic_pointer_cast<Parent>(parent->shared_from_this());
+		FATAL_UNLESS(this->parent_);
+	}
+	void setParent(Value * parent) {
+		FATAL_UNLESS(not(parent and not dynamic_cast<Parent*>(parent)));
+		setParent(dynamic_cast<Parent*>(parent));
+	}
+	void setIter(typename std::list<std::shared_ptr<Self>>::iterator iter) {
+		iter_ = iter;
+	}
+template <typename S>
 friend class ListConatiner;
 };
 
-
-template <typename Self>
 class AddressableMixin {
 public:
 	uaddr_t getAddress() const {
-		assert(hasSetAddress());
+		FATAL_UNLESS(hasSetAddress());
 		return this->address_.value();
 	}
 	void setAddress(uaddr_t address) {
@@ -95,7 +103,7 @@ private:
 	std::optional<uaddr_t> address_ = {};
 };
 
-template <typename Self, typename T>
+template <typename T>
 class ListConatiner: private std::list<std::shared_ptr<T>> {
 	using Base = std::list<std::shared_ptr<T>>;
 public:
@@ -109,39 +117,39 @@ public:
 		return Base::end();
 	}
 	auto erase(iterator iter) {
-		T* ptr = iter->get();
-		auto del_iter = itemIteratorMapping.find(ptr);
-		assert(del_iter != itemIteratorMapping.end());
-		itemIteratorMapping.erase(del_iter);
 		return Base::erase(iter);
 	}
+
+	auto insert(iterator insertPoint, std::shared_ptr<T> item) {
+		auto iter = Base::insert(insertPoint, item);
+
+		FATAL_UNLESS(dynamic_cast<Value*>(this));
+		item->setParent(dynamic_cast<Value*>(this));
+		item->setIter(iter);
+		return iter;
+	}
+
 
 	virtual std::shared_ptr<T> remove(T *item);
 
 	void push_back(std::shared_ptr<T> item) {
-		assert(itemIteratorMapping.find(item.get()) == itemIteratorMapping.end());
 		if (item->getParent()) {
 			FATAL("this item already has a parent, cannot be pushed....");
 		}
 		Base::push_back(item);
-		assert(item->getParent() == nullptr);
-		assert(dynamic_cast<Self*>(this));
-		item->setParent(dynamic_cast<Self*>(this));
+		auto iter = Base::end();
+		iter--;
+		FATAL_UNLESS(item->getParent() == nullptr);
+		FATAL_UNLESS(dynamic_cast<Value*>(this));
+		item->setParent(dynamic_cast<Value*>(this));
+		item->setIter(iter);
 	}
-
-private:
-	std::unordered_map<T *, iterator> itemIteratorMapping;
 };
 
-extern template class ListConatiner<class Function, class BasicBlock>;
-extern template class ListConatiner<class Module, class Function>;
-extern template class ListConatiner<class Function, class BasicBlock>;
 
-template <typename Self, typename T>
-class AddressedConatinerMixin: public ListConatiner<Self, T> {
-	using Base = ListConatiner<Self, T>;
-	using Container = std::map<std::pair<uaddr_t, void *>, typename Base::iterator>;
-
+template <typename T>
+class AddressableListConatiner: public ListConatiner<T> {
+	using Base = ListConatiner<T>;
 public:
 	T * getItemByAddress(uaddr_t addr) {
 		for (auto item: *this) {
@@ -161,54 +169,43 @@ public:
 		}
 		return nullptr;
 	}
-
-	void addAddressedItem(uaddr_t address, std::shared_ptr<T> value);
-	void addAddressedItem(std::shared_ptr<T> value) {
-		// value is not nullptr and _container don't have same item
-		//assert(value && _container.find(value->getAddress()) == _container.end());
-		Base::push_back(value);
-	}
 };
 
-template <typename Parent, typename Self>
-class AddressedWithParentMixin: public AddressableMixin<Self>, public HasParentMixin<Self, Parent>{
+template <typename Self, typename Parent>
+class AddressableListContainerItem: virtual public AddressableMixin, public ListContainerItem<Self, Parent>{
 public:
 	static inline std::shared_ptr<Self> create() {
-		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
-		assert(retv);
-		return retv;
+		return ListContainerItem<Self, Parent>::create();
 	}
-	static inline std::shared_ptr<Self> create(uaddr_t address) {
-		auto retv = create();
-		retv->setAddress(address);
-		return retv;
+	static inline std::shared_ptr<Self> create(Parent* parent) {
+		return ListContainerItem<Self, Parent>::create(parent);
 	}
 	static inline std::shared_ptr<Self> create(Parent *parent, uaddr_t address) {
 		auto retv = create(address);
-		parent->addAddressedItem(retv);
+		parent->push_back(retv);
+		return retv;
+	}
+	static inline std::shared_ptr<Self> create(uaddr_t address) {
+		auto retv = ListContainerItem<Self, Parent>::create();
+		retv->setAddress(address);
 		return retv;
 	}
 	static inline std::shared_ptr<Self> create(std::shared_ptr<Parent> parent, uaddr_t address) {
 		return create(parent.get(), address);
 	}
 
-	AddressedWithParentMixin() {};
-	AddressedWithParentMixin(const AddressedWithParentMixin&) = delete;
-public:
-	std::shared_ptr<Self> removeFromParent() {
-		assert(this->getParent());
-		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
-		return retv;
+	AddressableListContainerItem() {};
+	AddressableListContainerItem(const AddressableListContainerItem&) = delete;
+
+	virtual ~AddressableListContainerItem() {
 	}
 
-
-	virtual ~AddressedWithParentMixin() {
-	}
-
-template <typename S, typename C>
-friend class AddressedConatinerMixin;
+template <typename C>
+friend class AddressableListConatiner;
 };
 
-extern template class AddressedWithParentMixin<class Function, class BasicBlock>;
-extern template class AddressedWithParentMixin<class Module, class Function>;
-extern template class AddressedConatinerMixin<class Function, class BasicBlock>;
+/*
+extern template class ListConatiner<class BasicBlock>;
+extern template class ListConatiner<class Function>;
+extern template class ListConatiner<class BasicBlock>;
+*/

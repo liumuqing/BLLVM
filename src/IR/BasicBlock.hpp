@@ -16,10 +16,11 @@ class Instruction;
 class BasicBlock:
 	virtual public Value,
 	//public AddressedMixin<BasicBlock>,
-	virtual public AddressedWithParentMixin<Function, BasicBlock>
+	virtual public AddressableListContainerItem<BasicBlock, Function>,
+	virtual public ListConatiner<Instruction>
 {
 	using Self = BasicBlock;
-	using Conatiner = std::list<std::shared_ptr<Instruction>>;
+	using Conatiner = ListConatiner<Instruction>;
 public:
 	void insertInstructionAfter(const Instruction * insertPoint, std::shared_ptr<Instruction> inserted);
 	void insertInstructionBefore(const Instruction * insertPoint, std::shared_ptr<Instruction> inserted);
@@ -32,13 +33,13 @@ public:
 	std::shared_ptr<Instruction> removeInstruction(Instruction * inst);
 	virtual ~BasicBlock() {};
 	//friend class AddressedMixin<BasicBlock>;
-	friend class AddressedWithParentMixin<Function, BasicBlock>;
+	friend class ListContainerItem<BasicBlock, Function>;
+	//friend class AddressableListContainerItem<BasicBlock, Function>;
 protected:
 	BasicBlock() {};
 	BasicBlock(const Function&) = delete;
 
 private:
 	Conatiner instructions_;
-	Conatiner::iterator getIteratorOfInstruction(const Instruction * inst);
     void insertInstructionAt(Conatiner::iterator it, std::shared_ptr<Instruction> inserted);
 };

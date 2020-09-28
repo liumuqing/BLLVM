@@ -10,7 +10,7 @@ class User;
 class Use {
 	public:
 		Use (User *parent) {
-			assert(parent != nullptr);
+			FATAL_UNLESS(parent != nullptr);
 			this->parent = parent;
 		}
 
@@ -21,15 +21,15 @@ class Use {
 			this->next = other.next;
 			this->prev = other.prev;
 			if (this->next) {
-				assert(this->value);
+				FATAL_UNLESS(this->value);
 				this->next->prev = &this->next;
 			}
 			if (this->prev) {
-				assert(this->value);
+				FATAL_UNLESS(this->value);
 				(*this->prev) = this;
 			}
 			//We should set parent null here...
-			//But ~Use will assert(parent != nullptr)
+			//But ~Use will FATAL_UNLESS(parent != nullptr)
 			//other.parent = nullptr;
 			other.value = nullptr;
 			other.next = nullptr;
@@ -38,7 +38,7 @@ class Use {
 
 		~Use() {
 			// No one can change parent, so this value must not be nullptr;
-			assert(this->parent != nullptr);
+			FATAL_UNLESS(this->parent != nullptr);
 			if (this->value) {
 				removeFromList();
 			}
@@ -64,8 +64,8 @@ class Use {
 		void addToList(Use **listHead) {
 			//make sure a use is never add to a list twice
 			//  (you can remove it from List first)
-			assert(this->next == nullptr);
-			assert(this->prev == nullptr);
+			FATAL_UNLESS(this->next == nullptr);
+			FATAL_UNLESS(this->prev == nullptr);
 
 			this->next = *listHead;
 			if (this->next) {

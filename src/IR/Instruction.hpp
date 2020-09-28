@@ -1,4 +1,5 @@
 #pragma once
+#include "IR/AddressedItem.hpp"
 #include "IR/User.hpp"
 #include "IR/BasicBlock.hpp"
 enum Opcode {
@@ -40,8 +41,16 @@ enum Opcode {
 	UNREACHABLE,
 };
 
-class Instruction: virtual public User {
+class Instruction: virtual public User, virtual public ListContainerItem<Instruction, BasicBlock> {
 public:
+	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode);
+
+	template<typename... Args>
+	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode, Args... args) {
+		auto retv = create(bbl, opcode);
+		retv->appendOperands(args...);
+		return retv;
+	}
 	static inline std::shared_ptr<Instruction> create(Opcode opcode) {
 		auto retv = std::shared_ptr<Instruction>(new Instruction());
 		retv->opcode_ = opcode;
@@ -62,19 +71,11 @@ public:
 			this->appendOperands(remainingOperands...);
 		}
 	}
-	BasicBlock * getParent() const {
-		return parent_;
-	}
-	std::shared_ptr<Instruction> removeFromParent();
 protected:
 	Instruction():opcode_(UNDEF){};
 private:
 	Opcode opcode_;
-	BasicBlock * parent_ = nullptr;
 	void appendOperands() const {}
-	void setParent(BasicBlock * bbl) {
-		parent_ = bbl;
-	}
 
 	friend class BasicBlock;
 };

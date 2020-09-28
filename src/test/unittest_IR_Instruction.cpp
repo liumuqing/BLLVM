@@ -1,5 +1,7 @@
 #include <memory>
 #include <gtest/gtest.h>
+
+#include "IR/BasicBlock.hpp"
 #include "IR/Instruction.hpp"
 
 class IRInstructionTestSuit: public testing::Test {
@@ -56,4 +58,56 @@ TEST_F(IRInstructionTestSuit, test_2) {
 	user_345->replaceUsesOfWith(value2.get(), value1.get());
 	EXPECT_EQ(user_345->getOperand(0), value1.get());
 
+}
+TEST_F(IRInstructionTestSuit, test_instruction_twice) {
+	auto bbl = BasicBlock::create();
+
+	bbl->push_back(user_12);
+	bbl->push_back(user_345);
+	try {
+		bbl->push_back(user_345);
+		// an instruction cannot be pushed twice
+		FAIL();
+	} catch (...) {
+	}
+}
+
+TEST_F(IRInstructionTestSuit, test_instruction_in_two_bbl) {
+	auto bbl = BasicBlock::create();
+	auto bbl2 = BasicBlock::create();
+
+	bbl->push_back(user_12);
+	bbl->push_back(user_345);
+	try {
+		bbl2->push_back(user_345);
+		// an instruction cannot be pushed twice
+		FAIL();
+	} catch (...) {
+	}
+}
+
+TEST_F(IRInstructionTestSuit, test_remove_inst_from_bbl) {
+	auto bbl = BasicBlock::create();
+	auto bbl2 = BasicBlock::create();
+
+	bbl->push_back(user_12);
+	try {
+		bbl->remove(user_345.get());
+		// an instruction cannot be pushed twice
+		FAIL();
+	} catch (...) {
+	}
+	bbl2->push_back(user_345);
+	try {
+		bbl->remove(user_345.get());
+		// an instruction cannot be pushed twice
+		FAIL();
+	} catch (...) {
+	}
+
+	//try to remove one instruction from bbl
+	auto removed_value = bbl->remove(user_12.get());
+
+	// the value returned should be same..
+	ASSERT_EQ(removed_value, user_12);
 }

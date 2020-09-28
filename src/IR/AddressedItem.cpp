@@ -2,42 +2,26 @@
 #include "IR/Module.hpp"
 #include "IR/Function.hpp"
 #include "IR/BasicBlock.hpp"
+template <typename T>
+std::shared_ptr<T> ListConatiner<T>::remove(T *item) {
 
-template <typename Self, typename T>
-void AddressedConatinerMixin<Self, T>::addAddressedItem(uaddr_t address, std::shared_ptr<T> value) {
-    assert(value);
-    if (value->hasSetAddress()) {
-        assert(value->getAddress() == address);
-    }
-    else {
-        value->setAddress(address);
-    }
-    assert(value->hasSetAddress());
-    addAddressedItem(value);
+	FATAL_UNLESS(item);
+
+	// item's parent must be this, otherwise this item is not belongs to this.
+	FATAL_UNLESS(item->getParent() == this);
+
+	auto iter = item->getIterInParent();
+	auto retv = *iter;
+
+	erase(iter);
+	FATAL_UNLESS(retv.get() == item);
+	retv->setParent(nullptr);
+	return retv;
 }
 
-template <typename Self, typename T>
-std::shared_ptr<T> ListConatiner<Self, T>::remove(T *item) {
-		assert(item);
-		auto extractNode = itemIteratorMapping.extract(item);
-		assert(not extractNode.empty());
-		if (extractNode.empty()) {
-			return nullptr;
-		}
+//template class AddressableListConatiner<BasicBlock>;
 
-		auto iter = extractNode.mapped();
-		auto retv = *iter;
-
-		Base::erase(iter);
-		assert(retv.get() == item);
-		retv->setParent(nullptr);
-		return retv;
-	}
-
-template class AddressedWithParentMixin<Function, BasicBlock>;
-template class AddressedWithParentMixin<Module, Function>;
-template class AddressedConatinerMixin<Function, BasicBlock>;
-
-template class ListConatiner<Function, BasicBlock>;
-template class ListConatiner<Module, Function>;
+template class ListConatiner<BasicBlock>;
+template class ListConatiner<Function>;
+template class ListConatiner<Instruction>;
 //template class ListConatiner<Function, BasicBlock>;

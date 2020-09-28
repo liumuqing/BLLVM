@@ -1,9 +1,7 @@
 #include "IR/Instruction.hpp"
-std::shared_ptr<Instruction> Instruction::removeFromParent() {
-	if (!parent_) {
-		FATAL("cannot removeFromParent");
-	}
-	auto retv = parent_->removeInstruction(this);
-	assert(retv.get() == this);
+#include "IR/BasicBlock.hpp"
+std::shared_ptr<Instruction> Instruction::create(BasicBlock * bbl, Opcode opcode) {
+	auto retv = create(opcode);
+	bbl->push_back(retv);
 	return retv;
 }
