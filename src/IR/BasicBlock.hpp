@@ -29,8 +29,9 @@ public:
 	void insertInstructionAtEnd(std::shared_ptr<Instruction> inserted) {
 		insertInstructionAt(instructions_.end(), inserted);
 	}
+	std::shared_ptr<Instruction> removeInstruction(Instruction * inst);
 	virtual ~BasicBlock() {};
-	friend class AddressedMixin<BasicBlock>;
+	//friend class AddressedMixin<BasicBlock>;
 	friend class AddressedWithParentMixin<Function, BasicBlock>;
 protected:
 	BasicBlock() {};
@@ -38,5 +39,6 @@ protected:
 
 private:
 	Conatiner instructions_;
+	Conatiner::iterator getIteratorOfInstruction(const Instruction * inst);
     void insertInstructionAt(Conatiner::iterator it, std::shared_ptr<Instruction> inserted);
 };

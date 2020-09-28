@@ -3,8 +3,8 @@
 #include "IR/Function.hpp"
 #include "IR/BasicBlock.hpp"
 
-template <typename T>
-void AddressedConatinerMixin<T>::addAddressedItem(uaddr_t address, std::shared_ptr<T> value) {
+template <typename Self, typename T>
+void AddressedConatinerMixin<Self, T>::addAddressedItem(uaddr_t address, std::shared_ptr<T> value) {
     assert(value);
     if (value->hasSetAddress()) {
         assert(value->getAddress() == address);
@@ -15,22 +15,29 @@ void AddressedConatinerMixin<T>::addAddressedItem(uaddr_t address, std::shared_p
     assert(value->hasSetAddress());
     addAddressedItem(value);
 }
-template <typename Parent, typename T>
-void AddressedWithParentMixin<Parent, T>::setAddress(uaddr_t addr) {
-    auto parent = getParent();
 
-	// we may have a child node, which don't have parent
-	if (parent) {
-		auto self = removeFromParent();
-		AddressedMixin<T>::setAddress(addr);
-		parent->addAddressedItem(self);
-	}
-	else {
-		AddressedMixin<T>::setAddress(addr);
-	}
-}
+template <typename Self, typename T>
+std::shared_ptr<T> ListConatiner<Self, T>::remove(T *item) {
+		assert(item);
+		auto extractNode = itemIteratorMapping.extract(item);
+		assert(not extractNode.empty());
+		if (extractNode.empty()) {
+			return nullptr;
+		}
 
+		auto iter = extractNode.mapped();
+		auto retv = *iter;
+
+		Base::erase(iter);
+		assert(retv.get() == item);
+		retv->setParent(nullptr);
+		return retv;
+	}
 
 template class AddressedWithParentMixin<Function, BasicBlock>;
 template class AddressedWithParentMixin<Module, Function>;
-template class AddressedConatinerMixin<BasicBlock>;
+template class AddressedConatinerMixin<Function, BasicBlock>;
+
+template class ListConatiner<Function, BasicBlock>;
+template class ListConatiner<Module, Function>;
+//template class ListConatiner<Function, BasicBlock>;

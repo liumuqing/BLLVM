@@ -9,7 +9,7 @@
 #include "common.hpp"
 class Function;
 class Module : public Value,
-	public AddressedConatinerMixin<Function>
+	public AddressedConatinerMixin<Module, Function>
 {
 	using Containter = std::map<uaddr_t, std::shared_ptr<Function>>;
 

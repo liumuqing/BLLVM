@@ -40,7 +40,7 @@ enum Opcode {
 	UNREACHABLE,
 };
 
-class Instruction: public User {
+class Instruction: virtual public User {
 public:
 	static inline std::shared_ptr<Instruction> create(Opcode opcode) {
 		auto retv = std::shared_ptr<Instruction>(new Instruction());
@@ -65,14 +65,20 @@ public:
 	BasicBlock * getParent() const {
 		return parent_;
 	}
-	void removeFromParent() {
-	}
+	std::shared_ptr<Instruction> removeFromParent();
 protected:
 	Instruction():opcode_(UNDEF){};
 private:
 	Opcode opcode_;
 	BasicBlock * parent_ = nullptr;
 	void appendOperands() const {}
+	void setParent(BasicBlock * bbl) {
+		parent_ = bbl;
+	}
 
 	friend class BasicBlock;
+};
+
+class BinaryOp: virtual public Instruction {
+
 };

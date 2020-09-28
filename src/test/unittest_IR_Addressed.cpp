@@ -30,7 +30,6 @@ TEST_F(IRAddressedTestSuit, test_1) {
 
 	int index = 0;
 	for (auto bbl : function->children()) {
-		EXPECT_EQ(bbl->getAddress(), (index+1) * 0x1000);
 		index += 1;
 	}
 

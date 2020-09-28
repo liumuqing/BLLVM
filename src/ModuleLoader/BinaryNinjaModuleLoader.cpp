@@ -32,7 +32,7 @@ BinaryNinjaModuleLoader::~BinaryNinjaModuleLoader() {
 
 	if (instance_count.fetch_sub(1) == 1) {
 		//If this is the last instance
-		//after we deinit all resource, we are able shutdown BN
+		//after we uninit all resource, we are able shutdown BN
 		BNShutdown();
 	}
 }
@@ -94,27 +94,30 @@ uint8_t BinaryNinjaModuleLoader::getByteAt(uaddr_t addr) {
 }
 
 std::optional<std::string> BinaryNinjaModuleLoader::getSymbolNameAt(uaddr_t addr) {
+	assert(isOpen());
 	BinaryNinja::Ref<BinaryNinja::Symbol> symbol = binary_view->GetSymbolByAddress(addr);
+
 	if (!symbol) return {};
 	return symbol->GetFullName();
 }
-bool lift_bbl(Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
+
+BasicBlock* liftBasicBlock(Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
 	auto bbl = BasicBlock::create(ssa_bbl->GetStart());
 
-
 	function->addAddressedItem(bbl);
-	return true;
+	return bbl.get();
 }
-bool lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
+
+Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
 	auto function = Function::create(ssa_form->GetFunction()->GetStart());
 
 	for (auto ssa_bbl: ssa_form->GetBasicBlocks()) {
-		if (not lift_bbl(function.get(), ssa_bbl)) {
-			return false;
+		if (not liftBasicBlock(function.get(), ssa_bbl)) {
+			return nullptr;
 		}
 	}
 	module->addAddressedItem(function);
-	return true;
+	return function.get();
 }
 
 std::shared_ptr<Module> BinaryNinjaModuleLoader::lift() {

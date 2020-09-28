@@ -9,7 +9,7 @@ class Function:
 	virtual public Value,
 	//public AddressedMixin<Function>,
 	virtual public AddressedWithParentMixin<Module, Function>,
-	virtual public AddressedConatinerMixin<BasicBlock>
+	virtual public AddressedConatinerMixin<Function, BasicBlock>
 {
 public:
 	virtual ~Function() {};
@@ -23,6 +23,5 @@ public:
 protected:
 	Function() {}
 	Function(const Function&) = delete;
-friend class AddressedMixin<Function>;
 friend class AddressedWithParentMixin<Module, Function>;
 };
