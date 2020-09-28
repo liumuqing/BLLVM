@@ -15,9 +15,6 @@ class Module : public Value,
 
 public:
 	virtual ~Module(){}
-	std::vector<Function *> functions() {
-		return children();
-	}
 	void addFunction(uaddr_t addr, Function * function) {
 		addFunction(addr, std::dynamic_pointer_cast<Function>(function->shared_from_this()));
 	}

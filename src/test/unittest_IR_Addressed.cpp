@@ -29,7 +29,7 @@ TEST_F(IRAddressedTestSuit, test_1) {
 	function->addAddressedItem(0x3000, bbl3);
 
 	int index = 0;
-	for (auto bbl : function->children()) {
+	for (auto bbl : *function) {
 		index += 1;
 	}
 

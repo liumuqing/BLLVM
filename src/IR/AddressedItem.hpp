@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <optional>
 #include <list>
@@ -20,9 +21,12 @@ class HasParentBaseMixin {
 public:
 	HasParentBaseMixin(): parent_({}) {}
 	Value * getParent() const {
+		if (not this->parent_.has_value()) {
+			return nullptr;
+		}
 		assert(this->parent_.has_value());
 		assert(not this->parent_.value().expired());
-		return this->parent_.lock().get();
+		return this->parent_.value().lock().get();
 	}
 
 private:
@@ -105,6 +109,10 @@ public:
 		return Base::end();
 	}
 	auto erase(iterator iter) {
+		T* ptr = iter->get();
+		auto del_iter = itemIteratorMapping.find(ptr);
+		assert(del_iter != itemIteratorMapping.end());
+		itemIteratorMapping.erase(del_iter);
 		return Base::erase(iter);
 	}
 
@@ -122,8 +130,12 @@ public:
 	}
 
 private:
-	std::map<T *, iterator> itemIteratorMapping;
+	std::unordered_map<T *, iterator> itemIteratorMapping;
 };
+
+extern template class ListConatiner<class Function, class BasicBlock>;
+extern template class ListConatiner<class Module, class Function>;
+extern template class ListConatiner<class Function, class BasicBlock>;
 
 template <typename Self, typename T>
 class AddressedConatinerMixin: public ListConatiner<Self, T> {
@@ -156,62 +168,43 @@ public:
 		//assert(value && _container.find(value->getAddress()) == _container.end());
 		Base::push_back(value);
 	}
-
-	std::vector<T*> children() {
-		std::vector<T*> retv;
-		for (auto v: *this) {
-			retv.push_back(v.get());
-		}
-		return retv;
-	}
-
 };
 
-template <typename Parent, typename T>
-class AddressedWithParentMixin: virtual public AddressableMixin<T>, virtual public HasParentMixin<T, Parent>, virtual public Value {
+template <typename Parent, typename Self>
+class AddressedWithParentMixin: public AddressableMixin<Self>, public HasParentMixin<Self, Parent>{
 public:
-	static inline std::shared_ptr<T> create() {
-		std::shared_ptr<T> retv = std::shared_ptr<T>(new T());
+	static inline std::shared_ptr<Self> create() {
+		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
 		assert(retv);
 		return retv;
 	}
-	static inline std::shared_ptr<T> create(uaddr_t address) {
+	static inline std::shared_ptr<Self> create(uaddr_t address) {
 		auto retv = create();
 		retv->setAddress(address);
 		return retv;
 	}
-	static inline std::shared_ptr<T> create(Parent *parent, uaddr_t address) {
+	static inline std::shared_ptr<Self> create(Parent *parent, uaddr_t address) {
 		auto retv = create(address);
 		parent->addAddressedItem(retv);
 		return retv;
 	}
-	static inline std::shared_ptr<T> create(std::shared_ptr<Parent> parent, uaddr_t address) {
+	static inline std::shared_ptr<Self> create(std::shared_ptr<Parent> parent, uaddr_t address) {
 		return create(parent.get(), address);
 	}
 
 	AddressedWithParentMixin() {};
 	AddressedWithParentMixin(const AddressedWithParentMixin&) = delete;
 public:
-	Parent * getParent() {
-		assert(not this->parent_);
-		return this->parent_;
-	}
-
-	std::shared_ptr<T> removeFromParent() {
-		assert(parent_);
-		auto retv = parent_->popItemByAddress(this->getAddress());
-		this->parent_ = nullptr;
+	std::shared_ptr<Self> removeFromParent() {
+		assert(this->getParent());
+		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
 		return retv;
 	}
 
 
 	virtual ~AddressedWithParentMixin() {
-		// you should remove this item from its parent first.
-		assert(not this->parent_);
 	}
 
-protected:
-	Parent* parent_ = nullptr;
 template <typename S, typename C>
 friend class AddressedConatinerMixin;
 };
@@ -219,7 +212,3 @@ friend class AddressedConatinerMixin;
 extern template class AddressedWithParentMixin<class Function, class BasicBlock>;
 extern template class AddressedWithParentMixin<class Module, class Function>;
 extern template class AddressedConatinerMixin<class Function, class BasicBlock>;
-
-extern template class ListConatiner<class Function, class BasicBlock>;
-extern template class ListConatiner<class Module, class Function>;
-extern template class ListConatiner<class Function, class BasicBlock>;
