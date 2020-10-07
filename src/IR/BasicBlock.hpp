@@ -15,7 +15,6 @@ class Function;
 class Instruction;
 class BasicBlock:
 	virtual public Value,
-	//public AddressedMixin<BasicBlock>,
 	virtual public AddressableListContainerItem<BasicBlock, Function>,
 	virtual public ListConatiner<Instruction>
 {

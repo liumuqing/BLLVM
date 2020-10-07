@@ -1,4 +1,5 @@
 #include "ModuleLoader/BinaryNinjaModuleLoader.hpp"
+#include <mediumlevelilinstruction.h>
 
 #include <binaryninjaapi.h>
 
@@ -38,7 +39,7 @@ BinaryNinjaModuleLoader::~BinaryNinjaModuleLoader() {
 }
 
 void BinaryNinjaModuleLoader::open(const char *path) {
-	assert (not isOpen());
+	FATAL_UNLESS (not isOpen());
 
 	std::string input_path = path;
 	std::string bndb_path = (input_path.ends_with(".bndb") ? input_path : input_path + ".bndb");
@@ -78,12 +79,12 @@ void BinaryNinjaModuleLoader::open(const char *path) {
 }
 
 bool BinaryNinjaModuleLoader::isBigEndian() {
-	assert(isOpen());
+	FATAL_UNLESS(isOpen());
 	return binary_view->GetDefaultEndianness() == BigEndian;
 }
 
 uint8_t BinaryNinjaModuleLoader::getByteAt(uaddr_t addr) {
-	assert(isOpen());
+	FATAL_UNLESS(isOpen());
 	binary_reader->Seek(addr);
 
 	uint8_t retv;
@@ -94,25 +95,50 @@ uint8_t BinaryNinjaModuleLoader::getByteAt(uaddr_t addr) {
 }
 
 std::optional<std::string> BinaryNinjaModuleLoader::getSymbolNameAt(uaddr_t addr) {
-	assert(isOpen());
+	FATAL_UNLESS(isOpen());
 	BinaryNinja::Ref<BinaryNinja::Symbol> symbol = binary_view->GetSymbolByAddress(addr);
 
 	if (!symbol) return {};
 	return symbol->GetFullName();
 }
 
-BasicBlock* liftBasicBlock(Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
+bool liftInstruction(std::map<BinaryNinja::ExprId, Instruction *>& exprId2Instruction, BasicBlock * basicblock, BinaryNinja::Ref<BinaryNinja::MediumLevelILInstruction> ssa_inst) {
+	return true;
+}
+BasicBlock* liftBasicBlock(std::map<BinaryNinja::ExprId, Instruction *>& exprId2Instruction, Function * function, BinaryNinja::Ref<BinaryNinja::BasicBlock> ssa_bbl) {
 	auto bbl = BasicBlock::create(ssa_bbl->GetStart());
-
 	function->push_back(bbl);
 	return bbl.get();
 }
 
 Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
+	std::map<BinaryNinja::ExprId, Instruction *> exprId2Instruction;
+	std::map<BinaryNinja::Ref<BinaryNinja::BasicBlock>, BasicBlock *> bnbbl2bbl;
 	auto function = Function::create(ssa_form->GetFunction()->GetStart());
+	for (size_t expr_id = 0, count = ssa_form->GetExprCount(); expr_id< count; expr_id++) {
+		auto expr = ssa_form->GetExpr(expr_id);
+		auto inst_id = ssa_form->GetInstructionForExpr(expr_id);
+		auto ssa_bbl = ssa_form->GetBasicBlockForInstruction(inst_id);
+
+		if (!bnbbl2bbl.contains(ssa_bbl)) {
+			bnbbl2bbl[ssa_bbl] = BasicBlock::create(function.get()).get();
+		}
+		auto bbl = bnbbl2bbl[ssa_bbl];
+		auto inst = Instruction::create(bbl);
+		exprId2Instruction[expr_id] = inst.get();
+	}
+
+	//Now we have all dummy instructions and dummy basicblocks created, in `exprId2Instruction` and `bnbbl2bbl`
+	//Let's translate them....
+	//TODO:
+
+	//for ([&expr_id, &my_inst]: exprId2Instruction) {
+	//}
+
+
 
 	for (auto ssa_bbl: ssa_form->GetBasicBlocks()) {
-		if (not liftBasicBlock(function.get(), ssa_bbl)) {
+		if (not liftBasicBlock(exprId2Instruction, function.get(), ssa_bbl)) {
 			return nullptr;
 		}
 	}

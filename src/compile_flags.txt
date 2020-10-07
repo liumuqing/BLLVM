@@ -1,4 +1,5 @@
 -std=c++20
+-stdlib=libc++
 -I../binaryninja-api/
 -I../3rd_party/argparse/include
 -I../3rd_party/plog/include

@@ -67,3 +67,15 @@ TEST_F(IRUseTestSuit, test_2) {
 	EXPECT_EQ(user_345->getOperand(0), value1.get());
 
 }
+
+TEST_F(IRUseTestSuit, test_3) {
+	user_345->setOperand(0, value2.get());
+	value2->replaceUsesWith(value1.get());
+
+	EXPECT_EQ(user_12->getOperand(0), value1.get());
+	EXPECT_EQ(user_12->getOperand(1), value1.get());
+
+	EXPECT_EQ(user_345->getOperand(0), value1.get());
+	EXPECT_EQ(user_345->getOperand(1), value4.get());
+	EXPECT_EQ(user_345->getOperand(2), value5.get());
+}

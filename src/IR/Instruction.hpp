@@ -43,7 +43,10 @@ enum Opcode {
 
 class Instruction: virtual public User, virtual public ListContainerItem<Instruction, BasicBlock> {
 public:
-	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode);
+	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl) {
+		return create(bbl, NOP);
+	}
+	static std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode);
 
 	template<typename... Args>
 	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode, Args... args) {
@@ -71,6 +74,9 @@ public:
 			this->appendOperands(remainingOperands...);
 		}
 	}
+
+	void setOpcode(Opcode opcode);
+	Opcode getOpcode() const;
 protected:
 	Instruction():opcode_(UNDEF){};
 private:

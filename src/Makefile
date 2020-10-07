@@ -1,8 +1,8 @@
 DEPDIR := .d
 OBJDIR := ./obj
 
-CC = clang
-CXX = clang++
+CC = clang-11
+CXX = clang++-11
 
 CPPSRCS = $(shell find . -name "*.cpp" | grep -v "test/" | grep -v "blob/")
 CSRCS = $(shell find . -name "*.c" | grep -v "test/" | grep -v "blob/")
@@ -22,7 +22,7 @@ LIBS = -lbinaryninjaapi -ldl -pthread
 TARGET=../bin/main
 
 
-CPPFLAGS = $(H_INCLUDE) -Wall -g -std=c++20
+CPPFLAGS = $(H_INCLUDE) -Wall -g -std=c++20 #-stdlib=libc++
 CPPFLAGS += ${TEST_CPPFLAGS}
 
 #Link binaryninja, set rpath

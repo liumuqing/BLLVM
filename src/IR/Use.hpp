@@ -53,9 +53,11 @@ class Use {
 			return this->parent;
 		}
 
+		/*
 		void setUser(User *user) {
 			this->parent = user;
 		}
+		*/
 
 		//Never SetUser....
 	protected:

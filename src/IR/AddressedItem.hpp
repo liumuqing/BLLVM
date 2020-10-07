@@ -55,8 +55,8 @@ private:
 	std::optional<std::weak_ptr<Parent>> parent_;
 	typename std::list<std::shared_ptr<Self>>::iterator iter_;
 
-	//this method must be private...
-	//this method only used by ListConatiner
+	//these method must be private...
+	//they are used only by ListConatiner
 	void setParent(std::nullptr_t parent) {
 		this->parent_ = std::nullopt;
 	}
@@ -144,6 +144,8 @@ public:
 		item->setParent(dynamic_cast<Value*>(this));
 		item->setIter(iter);
 	}
+
+	virtual ~ListConatiner() {}
 };
 
 
@@ -172,7 +174,7 @@ public:
 };
 
 template <typename Self, typename Parent>
-class AddressableListContainerItem: virtual public AddressableMixin, public ListContainerItem<Self, Parent>{
+class AddressableListContainerItem: virtual public AddressableMixin, virtual public ListContainerItem<Self, Parent>{
 public:
 	static inline std::shared_ptr<Self> create() {
 		return ListContainerItem<Self, Parent>::create();

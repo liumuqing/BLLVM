@@ -18,8 +18,21 @@ public:
 		return std::enable_shared_from_this<Value>::weak_from_this();
 	}
 	virtual ~Value() {};
+
+	//replace all uses of self to value.
+	void replaceUsesWith(Value * value) {
+		while (useHead_) {
+			auto p = useHead_;
+			p->setValue(value);
+		}
+	}
+
+	bool isUsed() const {
+		return useHead_;
+	}
 private:
 	Use *useHead_ = nullptr;
+
 
 friend class Use;
 };
