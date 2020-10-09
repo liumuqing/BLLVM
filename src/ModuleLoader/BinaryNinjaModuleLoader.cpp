@@ -1,6 +1,7 @@
 #include "ModuleLoader/BinaryNinjaModuleLoader.hpp"
 #include <mediumlevelilinstruction.h>
 
+#include <binaryninjacore.h>
 #include <binaryninjaapi.h>
 
 #include <string>
@@ -10,6 +11,7 @@
 
 #include "IR/Function.hpp"
 #include "IR/BasicBlock.hpp"
+#include "IR/Instruction.hpp"
 
 std::atomic<int> BinaryNinjaModuleLoader::instance_count;
 
@@ -115,6 +117,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 	std::map<BinaryNinja::ExprId, Instruction *> exprId2Instruction;
 	std::map<BinaryNinja::Ref<BinaryNinja::BasicBlock>, BasicBlock *> bnbbl2bbl;
 	auto function = Function::create(ssa_form->GetFunction()->GetStart());
+	//ssa_form->GetFunction()->Get
 	for (size_t expr_id = 0, count = ssa_form->GetExprCount(); expr_id< count; expr_id++) {
 		auto expr = ssa_form->GetExpr(expr_id);
 		auto inst_id = ssa_form->GetInstructionForExpr(expr_id);
@@ -132,8 +135,22 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 	//Let's translate them....
 	//TODO:
 
-	//for ([&expr_id, &my_inst]: exprId2Instruction) {
-	//}
+
+
+	for (auto &&[expr_id, my_inst]: exprId2Instruction) {
+		//translate each expr to Instruction
+		auto expr = ssa_form->GetExpr(expr_id);
+		switch (expr.operation) {
+			case BNMediumLevelILOperation::MLIL_NOP:
+				my_inst->setOpcode(Opcode::NOP);
+				break;
+			case BNMediumLevelILOperation::MLIL_ADD:
+				//TODO
+				break;
+
+
+		}
+	}
 
 
 

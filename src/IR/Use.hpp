@@ -44,6 +44,9 @@ class Use {
 			}
 		}
 
+		Value * getValue() const {
+			return this->value;
+		}
 		Value * getValue() {
 			return this->value;
 		}
@@ -51,6 +54,15 @@ class Use {
 
 		User * getUser() {
 			return this->parent;
+		}
+
+		Value * operator->() const {
+			return getValue();
+		}
+
+		operator Value*() const {
+			// FIXME: do we need this method?
+			return getValue();
 		}
 
 		/*

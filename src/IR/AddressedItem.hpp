@@ -15,21 +15,9 @@ template <typename T> class AddressableListConatiner;
 template <typename Self, typename Parent> class ListContainerItem;
 template <typename Self, typename Parent> class AddressableListContainerItem;
 
-
 template <typename Self, typename Parent>
-class ListContainerItem {
+class WithParentMixin {
 public:
-	static inline std::shared_ptr<Self> create() {
-		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
-		FATAL_UNLESS(retv);
-		return retv;
-	}
-	static inline std::shared_ptr<Self> create(Parent* parent) {
-		auto retv = create();
-		parent->push_back(retv);
-		return retv;
-	}
-	ListContainerItem(): parent_({}) {}
 	Parent * getParent() const {
 		if (not this->parent_.has_value()) {
 			return nullptr;
@@ -38,24 +26,9 @@ public:
 		FATAL_UNLESS(not this->parent_.value().expired());
 		return this->parent_.value().lock().get();
 	}
-	typename std::list<std::shared_ptr<Self>>::iterator getIterInParent() const {
-		FATAL_UNLESS(iter_->get() == this);
-		return iter_;
-	}
-	std::shared_ptr<Self> removeFromParent() {
-		FATAL_UNLESS(this->getParent());
-		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
-		return retv;
-	}
 
-
-private:
-	ListContainerItem(const ListContainerItem&) = delete;
-	ListContainerItem(ListContainerItem&&) = delete;
-	std::optional<std::weak_ptr<Parent>> parent_;
-	typename std::list<std::shared_ptr<Self>>::iterator iter_;
-
-	//these method must be private...
+protected:
+	//these method must be protected...
 	//they are used only by ListConatiner
 	void setParent(std::nullptr_t parent) {
 		this->parent_ = std::nullopt;
@@ -73,6 +46,40 @@ private:
 		FATAL_UNLESS(not(parent and not dynamic_cast<Parent*>(parent)));
 		setParent(dynamic_cast<Parent*>(parent));
 	}
+private:
+	std::optional<std::weak_ptr<Parent>> parent_;
+};
+template <typename Self, typename Parent>
+class ListContainerItem:
+	virtual public WithParentMixin<Self, Parent>{
+public:
+	static inline std::shared_ptr<Self> create() {
+		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
+		FATAL_UNLESS(retv);
+		return retv;
+	}
+	static inline std::shared_ptr<Self> create(Parent* parent) {
+		auto retv = create();
+		parent->push_back(retv);
+		return retv;
+	}
+	ListContainerItem() {}
+	typename std::list<std::shared_ptr<Self>>::iterator getIterInParent() const {
+		FATAL_UNLESS(iter_->get() == this);
+		return iter_;
+	}
+	std::shared_ptr<Self> removeFromParent() {
+		FATAL_UNLESS(this->getParent());
+		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
+		return retv;
+	}
+
+
+private:
+	ListContainerItem(const ListContainerItem&) = delete;
+	ListContainerItem(ListContainerItem&&) = delete;
+	typename std::list<std::shared_ptr<Self>>::iterator iter_;
+
 	void setIter(typename std::list<std::shared_ptr<Self>>::iterator iter) {
 		iter_ = iter;
 	}
