@@ -15,6 +15,9 @@ template <typename T> class AddressableListConatiner;
 template <typename Self, typename Parent> class ListContainerItem;
 template <typename Self, typename Parent> class AddressableListContainerItem;
 
+template <typename Self>
+class WithSizeMixin {
+};
 template <typename Self, typename Parent>
 class WithParentMixin {
 public:
