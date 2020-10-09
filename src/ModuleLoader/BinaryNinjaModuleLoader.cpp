@@ -124,11 +124,11 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 		auto ssa_bbl = ssa_form->GetBasicBlockForInstruction(inst_id);
 
 		if (!bnbbl2bbl.contains(ssa_bbl)) {
-			bnbbl2bbl[ssa_bbl] = BasicBlock::create(function.get()).get();
+			bnbbl2bbl[ssa_bbl] = BasicBlock::create(function.get());
 		}
 		auto bbl = bnbbl2bbl[ssa_bbl];
 		auto inst = Instruction::create(bbl);
-		exprId2Instruction[expr_id] = inst.get();
+		exprId2Instruction[expr_id] = inst;
 	}
 
 	//Now we have all dummy instructions and dummy basicblocks created, in `exprId2Instruction` and `bnbbl2bbl`

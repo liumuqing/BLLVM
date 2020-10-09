@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "ModuleLoader/BinaryNinjaModuleLoader.hpp"
+#include "IR/Function.hpp"
 
 class BinaryNinjaModuleLoaderTestSuit_SLOW: public testing::Test {
 protected:

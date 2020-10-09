@@ -41,15 +41,18 @@ enum Opcode {
 	UNREACHABLE,
 };
 
-class Instruction: virtual public User, virtual public ListContainerItem<Instruction, BasicBlock> {
+class Instruction:
+	virtual public WithWidthMixin,
+	virtual public User,
+	virtual public ListContainerItem<Instruction, BasicBlock> {
 public:
-	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl) {
+	static inline Instruction* create(BasicBlock * bbl) {
 		return create(bbl, NOP);
 	}
-	static std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode);
+	static Instruction* create(BasicBlock * bbl, Opcode opcode);
 
 	template<typename... Args>
-	static inline std::shared_ptr<Instruction> create(BasicBlock * bbl, Opcode opcode, Args... args) {
+	static inline Instruction* create(BasicBlock * bbl, Opcode opcode, Args... args) {
 		auto retv = create(bbl, opcode);
 		retv->appendOperands(args...);
 		return retv;
