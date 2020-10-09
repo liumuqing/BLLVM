@@ -117,6 +117,21 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 	std::map<BinaryNinja::ExprId, Instruction *> exprId2Instruction;
 	std::map<BinaryNinja::Ref<BinaryNinja::BasicBlock>, BasicBlock *> bnbbl2bbl;
 	auto function = Function::create(ssa_form->GetFunction()->GetStart());
+
+	//Create Function Parameters
+	{
+		auto parameter_vars = ssa_form->GetFunction()->GetParameterVariables().GetValue();
+		for (size_t index = 0, count = parameter_vars.size(); index < count; index ++) {
+			auto paramaterType = ssa_form->GetFunction()->GetVariableType(parameter_vars[index]);
+			if (not paramaterType) {
+				FATAL("BinaryNinja cannot infer parameter's type...");
+			}
+			//check paramaterType->GetClass(), see if it's bool type...
+			function->createAndAppendParameter(paramaterType->GetWidth() * 8);
+
+		}
+	}
+
 	//ssa_form->GetFunction()->Get
 	for (size_t expr_id = 0, count = ssa_form->GetExprCount(); expr_id< count; expr_id++) {
 		auto expr = ssa_form->GetExpr(expr_id);
