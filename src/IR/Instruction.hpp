@@ -4,6 +4,7 @@
 #include "IR/BasicBlock.hpp"
 enum Opcode {
 	NOP,
+	ALLOC,
 	ADD,
 	SUB,
 	XOR,
@@ -40,37 +41,14 @@ enum Opcode {
 	RETURN,
 	UNREACHABLE,
 };
-
 class Instruction:
 	virtual public WithWidthMixin,
-	virtual public User,
-	virtual public ListContainerItem<Instruction, BasicBlock> {
+	virtual public WithParentMixin<BasicBlock>,
+	virtual public ListContainerItem<Instruction, BasicBlock>,
+	virtual public User{
 public:
-	static inline Instruction* create(BasicBlock * bbl) {
-		return create(bbl, NOP);
-	}
-	static Instruction* create(BasicBlock * bbl, Opcode opcode);
-
 	template<typename... Args>
-	static inline Instruction* create(BasicBlock * bbl, Opcode opcode, Args... args) {
-		auto retv = create(bbl, opcode);
-		retv->appendOperands(args...);
-		return retv;
-	}
-	static inline std::shared_ptr<Instruction> create(Opcode opcode) {
-		auto retv = std::shared_ptr<Instruction>(new Instruction());
-		retv->opcode_ = opcode;
-		retv->setNumOperands(0);
-		return retv;
-	}
-	template<typename... Args>
-	static inline std::shared_ptr<Instruction> create(Opcode opcode, Args... args) {
-		auto retv = create(opcode);
-		retv->appendOperands(args...);
-		return retv;
-	}
-	template<typename... Args>
-	void appendOperands(Instruction * firstOperand, Args... remainingOperands) {
+	void appendOperands(Value * firstOperand, Args... remainingOperands) {
 		this->setNumOperands(this->getNumOperands()+1);
 		this->setOperand(this->getNumOperands()-1, firstOperand);
 		if (sizeof...(remainingOperands)) {
@@ -78,17 +56,50 @@ public:
 		}
 	}
 
-	void setOpcode(Opcode opcode);
-	Opcode getOpcode() const;
+	//void setOpcode(Opcode opcode);
+	virtual Opcode getOpcode() const = 0;
 protected:
-	Instruction():opcode_(UNDEF){};
+	Instruction(){};
+	void pushToBBL(BasicBlock * bbl);
+
+
 private:
-	Opcode opcode_;
 	void appendOperands() const {}
 
 	friend class BasicBlock;
 };
 
-class BinaryOp: virtual public Instruction {
+template <typename Self, Opcode opcode>
+class InstructionKind: virtual public Instruction{
+public:
+	static Self* create(BasicBlock * bbl) {
+		auto retv = create();
+		retv->pushToBBL(bbl);
+		return retv.get();
+	}
 
+	template<typename... Args>
+	static inline Self* create(BasicBlock * bbl, Args... args) {
+		auto retv = create(bbl);
+		retv->appendOperands(args...);
+		return retv;
+	}
+	template<typename... Args>
+	static inline std::shared_ptr<Instruction> create(Args... args) {
+		auto retv = create();
+		retv->appendOperands(args...);
+		return retv;
+	}
+	static inline std::shared_ptr<Self> create() {
+		auto retv = std::shared_ptr<Self>(new Self());
+		retv->setNumOperands(0);
+		return retv;
+	}
+	virtual Opcode getOpcode() const override final {
+		return opcode;
+	}
 };
+
+class UndefiendInstruction: virtual public InstructionKind<UndefiendInstruction, UNDEF> {};
+class NopInstruction: virtual public InstructionKind<NopInstruction, NOP> {};
+class AllocInstruction: virtual public InstructionKind<AllocInstruction, ALLOC> {};

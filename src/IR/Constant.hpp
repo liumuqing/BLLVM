@@ -6,7 +6,7 @@
 class Module;
 class ConstantInt:
 	virtual public Value,
-	virtual public WithParentMixin<ConstantInt, Module>,
+	virtual public WithParentMixin<Module>,
 	virtual public WithWidthMixin
 {
 

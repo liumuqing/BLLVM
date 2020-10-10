@@ -42,7 +42,7 @@ friend class ListContainerItem<Function, Module>;
 class Parameter:
 	virtual public Value,
 	virtual public WithWidthMixin,
-	virtual public WithParentMixin<Parameter, Function>
+	virtual public WithParentMixin<Function>
 {
 public:
 	virtual ~Parameter(){};

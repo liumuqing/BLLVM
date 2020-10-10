@@ -8,14 +8,14 @@ class IRInstructionTestSuit: public testing::Test {
 protected:
 	void SetUp() override {
 
-		value1 = Instruction::create(NOP);
-		value2 = Instruction::create(NOP);
-		value3 = Instruction::create(NOP);
-		value4 = Instruction::create(NOP);
-		value5 = Instruction::create(NOP);
+		value1 = NopInstruction::create();
+		value2 = NopInstruction::create();
+		value3 = NopInstruction::create();
+		value4 = NopInstruction::create();
+		value5 = NopInstruction::create();
 
-		user_12 = Instruction::create(NOP, value1.get(), value2.get());
-		user_345 = Instruction::create(NOP, value3.get(), value4.get(), value5.get());
+		user_12 = NopInstruction::create(value1.get(), value2.get());
+		user_345 = NopInstruction::create(value3.get(), value4.get(), value5.get());
 	}
 	void TearDown() override {
 		user_12 = nullptr;

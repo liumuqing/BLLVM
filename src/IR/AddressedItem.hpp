@@ -35,7 +35,7 @@ public:
 private:
 	size_t width_ = 0;
 };
-template <typename Self, typename Parent>
+template <typename Parent>
 class WithParentMixin {
 public:
 	Parent * getParent() const {
@@ -79,7 +79,7 @@ private:
 };
 template <typename Self, typename Parent>
 class ListContainerItem:
-	virtual public WithParentMixin<Self, Parent>{
+	virtual public WithParentMixin<Parent>{
 public:
 	static inline std::shared_ptr<Self> create() {
 		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());

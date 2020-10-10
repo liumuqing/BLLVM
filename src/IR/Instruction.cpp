@@ -1,13 +1,8 @@
 #include "IR/Instruction.hpp"
 #include "IR/BasicBlock.hpp"
-Instruction* Instruction::create(BasicBlock * bbl, Opcode opcode) {
-	auto retv = create(opcode);
-	bbl->push_back(retv);
-	return retv.get();
-}
-void Instruction::setOpcode(Opcode opcode) {
-	this->opcode_ = opcode;
-}
-Opcode Instruction::getOpcode() const {
-	return this->opcode_;
+
+extern template class InstructionKind<UndefiendInstruction, UNDEF>;
+
+void Instruction::pushToBBL(BasicBlock * bbl) {
+	bbl->push_back(this->shared_from_this<Instruction>());
 }
