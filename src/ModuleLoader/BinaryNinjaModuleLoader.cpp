@@ -163,7 +163,7 @@ static void lift_function_step_2_create_dummy_inst(LiftFunctionContext& ctx) {
 			ctx.bnBB2BB[ssa_bbl] = BasicBlock::create(ctx.function.get());
 		}
 		auto bbl = ctx.bnBB2BB[ssa_bbl];
-		auto inst = NopInstruction::create(bbl);
+		auto inst = NopInstruction::create(NopInstruction::EndOfBasicBlock(bbl));
 		ctx.exprId2Instruction[expr_id] = inst;
 		if (ctx.ssa_form->GetIndexForInstruction(inst_id) == expr_id) {
 			ctx.instId2Instruction[inst_id] = inst;
@@ -277,19 +277,31 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 
 
 
-	for (auto &&[expr_id, my_inst]: ctx.exprId2Instruction) {
+	for (auto &&[expr_id, placeholderInst]: ctx.exprId2Instruction) {
 		//translate each expr to Instruction
 		auto expr = ssa_form->GetExpr(expr_id);
+		Instruction * newInst = nullptr;
 		switch (expr.operation) {
 			case BNMediumLevelILOperation::MLIL_NOP:
+				newInst = NopInstruction::create(
+						NopInstruction::AfterInstruction(placeholderInst)
+						);
 				break;
 			case BNMediumLevelILOperation::MLIL_ADD:
 				//TODO
-				my_inst->setBitWidth(expr.size * 8);
+				//newInst->setBitWidth(expr.size * 8);
 				break;
 
 
 		}
+		//Let's replace placeholderInst to newInst;
+		if (newInst) {
+			placeholderInst->replaceUsesWith(newInst);
+			placeholderInst->removeFromParent();
+		} else {
+			WARN("Inst cannot be translated? PlaceHolder kept as Undefined");
+		}
+
 	}
 
 

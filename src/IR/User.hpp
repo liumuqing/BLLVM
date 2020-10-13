@@ -33,10 +33,11 @@ public:
 			operands.push_back(Use(this));
 		}
 	}
-	virtual Value* getOperand(size_t index) {
+	virtual Value* getOperand(size_t index) const {
 		return operands[index].getValue();
 	}
 	virtual void setOperand(size_t index, Value *value) {
+		FATAL_UNLESS(index < operands.size());
 		operands[index].setValue(value);
 	}
 	virtual ~User(){}
