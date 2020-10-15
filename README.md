@@ -1,5 +1,11 @@
 ### Build
 ```
 sudo apt-get install libgtest-dev
-make run_test
+
+pushd ./binaryninja-api && make
+popd
+
+pushd ./src
+make test
+popd
 ```
