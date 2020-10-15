@@ -27,7 +27,7 @@ CPPFLAGS += ${TEST_CPPFLAGS}
 
 #Link binaryninja, set rpath
 LDFLAGS = -g /opt/binaryninja/libbinaryninjacore.so.1 -Wl,-rpath,/opt/binaryninja/
-LINKER = clang++
+LINKER = clang++-11
 
 COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 COMPILE.cc = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
