@@ -231,9 +231,12 @@ auto getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSA
 		size_t pointerSizeInBits = ctx.ssa_form->GetFunction()->GetPlatform()->GetArchitecture()->GetAddressSize() * 8;
 		FATAL_UNLESS(pointerSizeInBits == 16 || pointerSizeInBits == 32 || pointerSizeInBits == 64);
 
-		auto new_inst = AllocInstruction::create();
-		new_inst->appendOperands(ConstantInt::create(ctx.function->getParent(), pointerSizeInBits, getBitWidthOfSSAVariable(ctx, ssaVar)));
-		new_inst->setBitWidth(pointerSizeInBits);
+		auto new_inst = AllocInstruction::create(
+				AllocInstruction::BitWidth(pointerSizeInBits)
+				//AllocInstruction::AllocatedBitSize(getBitWidthOfSSAVariable(ctx, ssaVar))
+				);
+		//new_inst->setAllocatedBitSize(getBitWidthOfSSAVariable(ctx, ssaVar));
+		//new_inst->setBitWidth(pointerSizeInBits);
 		ctx.entryBasicBlock->insertInstructionAtBegin(new_inst);
 
 		auto [newIter, isInserted] = ctx.memoryVariableToAllocInst.insert(std::make_pair(ssaVar.var, new_inst));
@@ -281,6 +284,13 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 		//translate each expr to Instruction
 		auto expr = ssa_form->GetExpr(expr_id);
 		Instruction * newInst = nullptr;
+		auto getTranslatedReadOperand = [&ctx](const BinaryNinja::SSAVariable& ssaVar, Instruction * placeholderInst) {
+			if (isMemorySSA(ctx, ssaVar)) {
+				auto allocInst = getMemoryVariableAllocInst(ctx, ssaVar);
+			}
+
+
+		};
 		switch (expr.operation) {
 			case BNMediumLevelILOperation::MLIL_NOP:
 				newInst = NopInstruction::create(
@@ -288,6 +298,9 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 						);
 				break;
 			case BNMediumLevelILOperation::MLIL_ADD:
+				newInst = AddInstruction::create(
+						AddInstruction::AfterInstruction(placeholderInst)
+						);
 				//TODO
 				//newInst->setBitWidth(expr.size * 8);
 				break;

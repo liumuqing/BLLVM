@@ -42,10 +42,37 @@ enum Opcode {
 	UNREACHABLE,
 };
 class Instruction:
+	virtual public Value,
 	virtual public WithWidthMixin,
 	virtual public WithParentMixin<BasicBlock>,
 	virtual public ListContainerItem<Instruction, BasicBlock>,
 	virtual public User{
+protected:
+
+#define DEFINE_CONFIG_TYPE(Name, Type) \
+	class Name {\
+	public:\
+		explicit Name(Type const& value) {\
+			value_ = value;\
+		}\
+		Name(const Name& other) {\
+			value_ = other.value_;\
+		}\
+		operator Type() {\
+			return value_;\
+		}\
+		Type getValue() const { \
+			return value_; \
+		}\
+	private:\
+		Type value_;\
+	}\
+
+public:
+	DEFINE_CONFIG_TYPE(BitWidth, size_t);
+	DEFINE_CONFIG_TYPE(EndOfBasicBlock, BasicBlock *);
+	DEFINE_CONFIG_TYPE(AfterInstruction, Instruction *);
+	DEFINE_CONFIG_TYPE(BeforeInstruction, Instruction *);
 public:
 	template<typename... Args>
 	void appendOperands(Value * firstOperand, Args... remainingOperands) {
@@ -60,111 +87,61 @@ public:
 	virtual Opcode getOpcode() const = 0;
 protected:
 	Instruction(){};
-	void pushToBBL(BasicBlock * bbl);
 	void insertSelfAfter(Instruction * pos);
 	void insertSelfBefore(Instruction * pos);
+	void pushToBBL(BasicBlock * bbl);
 
 
 private:
 	void appendOperands() const {}
 
 	friend class BasicBlock;
+	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::EndOfBasicBlock bbl);
+	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::BeforeInstruction pos);
+	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::AfterInstruction pos);
 };
+
+template <typename InstructionType, typename ConfigValue> inline InstructionType* configInstruction(InstructionType *self, ConfigValue value) {
+	auto pointer = self->template shared_from_this<InstructionType>();
+	configInstruction(pointer, value.getValue());
+	return self;
+}
+//template <typename InstructionType, typename ConfigValue> inline auto configInstruction(std::shared_ptr<InstructionType> self, ConfigValue value);
+template <typename InstructionType> inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::BitWidth bitWidth) {
+	self->setBitWidth(bitWidth);
+	return self;
+}
+template <typename InstructionType> inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::EndOfBasicBlock bbl) {
+	FATAL_UNLESS(not self->getParent());
+	self->pushToBBL(bbl);
+	return self.get();
+}
+template <typename InstructionType> inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::AfterInstruction pos) {
+	FATAL_UNLESS(not self->getParent());
+	self->insertSelfAfter(pos);
+	return self.get();
+}
+template <typename InstructionType> inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::BeforeInstruction pos) {
+	FATAL_UNLESS(not self->getParent());
+	self->insertSelfBefore(pos);
+	return self.get();
+}
 
 template <typename Self, Opcode opcode>
 class InstructionKind: virtual public Instruction {
-protected:
-	template <typename Type, char...Name> class ConfigType {
-	public:
-		ConfigType(Type value) {
-			value_ = value;
-		}
-		ConfigType(const ConfigType& other) {
-			value_ = other.value_;
-		}
-		operator Type() {
-			return value_;
-		}
-	private:
-		Type value_;
-
-	};
-
 public:
-	typedef ConfigType<size_t, 'B', 'i', 't', 'S', 'i', 'Z', 'e'> BitWidth;
-	typedef ConfigType<BasicBlock *, 'B', 'i', 't', 'S', 'i', 'Z', 'e'> EndOfBasicBlock;
-	typedef ConfigType<Instruction *, 'A', 'f', 't', 'S', 'i', 'Z', 'e'> AfterInstruction;
-	typedef ConfigType<Instruction *, 'A', 'f', 't', 'S', 'i', 'Z', 'e'> BeforeInstruction;
-
-	static Self * dropOwenerShip(std::shared_ptr<Self> self) {
-		return self.get();
-	}
-	static Self * dropOwenerShip(const Self * self) {
-		return self;
-	}
-	bool hasParentDuringCreation_ = false;
-	void dropOwnerShip_() {
-		hasParentDuringCreation_ = false;
-	}
-
-	template<typename ConfigType> static auto config(Self * self, const ConfigType& value) {
-		auto pointer = self->template shared_from_this<Self>();
-		config(pointer, value);
-		return self;
-	}
-	template<typename ConfigType> static auto config(std::shared_ptr<Self> self, ConfigType value);
-
-	template<> static auto config<BitWidth>(std::shared_ptr<Self> self, BitWidth bitWidth) {
-		self->setBitWidth(bitWidth);
-		return self;
-	}
-	template<> static auto config<EndOfBasicBlock>(std::shared_ptr<Self> self, EndOfBasicBlock parent) {
-		FATAL_UNLESS(not self->getParent());
-		self->pushToBBL(parent);
-		return dropOwenerShip(self);
-	}
-	template<> static auto config<AfterInstruction>(std::shared_ptr<Self> self, AfterInstruction pos) {
-		FATAL_UNLESS(not self->getParent());
-		self->insertSelfAfter(pos);
-		return dropOwenerShip(self);
-	}
-	template<> static auto config<BeforeInstruction>(std::shared_ptr<Self> self, BeforeInstruction pos) {
-		FATAL_UNLESS(not self->getParent());
-		self->insertSelfBefore(pos);
-		return dropOwenerShip(self);
-	}
-public:
-	template<typename FirstConfig, typename... Args>
-	static inline auto create(FirstConfig oneConfig, Args... args) {
-		auto retv = create(args...);
-		return config(retv, oneConfig);
-	}
-	template<typename... Args>
-	static inline auto create(Value* firstOperand, Args... args) {
+	template<typename ArgType, typename... Args>
+	static inline std::shared_ptr<Self> create(ArgType* firstOperand, Args... args) {
 		auto retv = create();
 		retv->appendOperands(firstOperand, args...);
 		return retv;
 	}
-
-	/*
-	static auto createAfterInstruction(Instruction * pos) {
-		return create(AfterInstruction(pos));
+    template<typename FirstConfig, typename... Args>
+    static inline auto create(const FirstConfig& oneConfig, Args... args) {
+		auto retv = create(args...);
+		return configInstruction(retv, oneConfig);
 	}
-	static auto createBeforeInstruction(Instruction * pos) {
-		return create(BeforeInstruction(pos));
-	}
-	static auto create(BasicBlock * bbl) {
-		return create(EndOfBasicBlock(bbl));
-	}
-	static auto create(BasicBlock * parent, size_t bitWidth) {
-		return create(EndOfBasicBlock(parent), BitWidth(bitWidth));
-	}
-	static auto create(size_t bitWidth) {
-		return create(BitWidth(bitWidth));
-	}
-	*/
-
-	static inline auto create() {
+	static auto create() {
 		auto retv = std::shared_ptr<Self>(new Self());
 		retv->setNumOperands(0);
 		return retv;
@@ -174,7 +151,8 @@ public:
 	}
 };
 
-class BinaryInstruction: public Instruction {
+
+class BinaryInstruction: virtual public Instruction {
 	private:
 		void makeSureAtLeastTwoOperands() {
 			if (getNumOperands() < 2) {
@@ -190,15 +168,37 @@ class BinaryInstruction: public Instruction {
 			FATAL_UNLESS(getNumOperands() >= 2);
 			return getOperand(1);
 		}
-		Value * setLeft(Value * operand) {
+		void setLeft(Value * operand) {
 			makeSureAtLeastTwoOperands();
 			setOperand(0, operand);
 		}
-		Value * setRight(Value * operand) {
+		void setRight(Value * operand) {
 			makeSureAtLeastTwoOperands();
 			setOperand(1, operand);
 		}
-}
+};
 class UndefiendInstruction: virtual public InstructionKind<UndefiendInstruction, UNDEF> {};
 class NopInstruction: virtual public InstructionKind<NopInstruction, NOP> {};
-class AllocInstruction: virtual public InstructionKind<AllocInstruction, ALLOC> {};
+class AddInstruction:
+	virtual public InstructionKind<AddInstruction, ADD>,
+	virtual public BinaryInstruction {
+};
+class AllocInstruction: virtual public InstructionKind<AllocInstruction, ALLOC> {
+	public:
+		DEFINE_CONFIG_TYPE(VariableBitWidth, size_t);
+
+		void setVariableBitWidth(size_t varialbeBitWidth) {
+			varialbeBitWidth_ = varialbeBitWidth;
+		}
+		size_t getVariableBitWidth() const {
+			return varialbeBitWidth_;
+		}
+
+	private:
+		size_t varialbeBitWidth_;
+
+};
+inline auto configInstruction(std::shared_ptr<AllocInstruction> self, AllocInstruction::VariableBitWidth width) {
+	self->setVariableBitWidth(width);
+	return self;
+}
