@@ -6,6 +6,7 @@
 
 #include <string>
 #include <filesystem>
+#include <variant>
 
 #include <plog/Log.h>
 
@@ -24,8 +25,8 @@ struct LiftFunctionContext {
 	std::map<size_t, Instruction *> instId2Instruction;
 	std::map<BinaryNinja::Ref<BinaryNinja::BasicBlock>, BasicBlock *> bnBB2BB;
 
-	std::map<BinaryNinja::SSAVariable, std::optional<std::shared_ptr<Value>>> SSAVariableToInst;
-	std::map<BinaryNinja::Variable, std::shared_ptr<Instruction>> memoryVariableToAllocInst;
+	std::map<BinaryNinja::SSAVariable, std::shared_ptr<Value>> SSAVariableToInst;
+	std::map<BinaryNinja::Variable, std::shared_ptr<AllocInstruction>> memoryVariableToAllocInst;
 };
 
 std::atomic<int> BinaryNinjaModuleLoader::instance_count;
@@ -212,7 +213,9 @@ auto getSSAVariableValue(LiftFunctionContext& ctx, const BinaryNinja::SSAVariabl
 			auto newInst = UndefiendInstruction::create();
 			FATAL_UNLESS(ctx.instId2Instruction.contains(inst_id));
 			auto insertPos = ctx.instId2Instruction[inst_id];
-			insertPos->getParent()->insertInstructionAfter(insertPos, newInst);
+			auto parent = dynamic_cast<BasicBlock *>(insertPos->getParent());
+			FATAL_UNLESS(parent);
+			parent->insertInstructionAfter(insertPos, newInst);
 
 			auto [newIter, isInserted] = ctx.SSAVariableToInst.insert(std::make_pair(ssaVar, newInst));
 			FATAL_UNLESS(isInserted);
@@ -221,10 +224,10 @@ auto getSSAVariableValue(LiftFunctionContext& ctx, const BinaryNinja::SSAVariabl
 	}
 
 	FATAL_UNLESS(iter != ctx.SSAVariableToInst.end());
-	return iter->second;
+	return iter->second.get();
 }
 
-auto getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
+AllocInstruction *getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
 	FATAL_UNLESS(isMemorySSA(ctx, ssaVar));
 	auto iter = ctx.memoryVariableToAllocInst.find(ssaVar.var);
 	if (iter == ctx.memoryVariableToAllocInst.end()){
@@ -232,8 +235,8 @@ auto getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSA
 		FATAL_UNLESS(pointerSizeInBits == 16 || pointerSizeInBits == 32 || pointerSizeInBits == 64);
 
 		auto new_inst = AllocInstruction::create(
-				AllocInstruction::BitWidth(pointerSizeInBits)
-				//AllocInstruction::AllocatedBitSize(getBitWidthOfSSAVariable(ctx, ssaVar))
+				AllocInstruction::BitWidth(pointerSizeInBits),
+				AllocInstruction::VariableBitWidth(getBitWidthOfSSAVariable(ctx, ssaVar))
 				);
 		//new_inst->setAllocatedBitSize(getBitWidthOfSSAVariable(ctx, ssaVar));
 		//new_inst->setBitWidth(pointerSizeInBits);
@@ -246,7 +249,7 @@ auto getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSA
 	}
 
 	FATAL_UNLESS(iter != ctx.memoryVariableToAllocInst.end());
-	return iter->second;
+	return iter->second.get();
 }
 
 Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
@@ -284,12 +287,28 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 		//translate each expr to Instruction
 		auto expr = ssa_form->GetExpr(expr_id);
 		Instruction * newInst = nullptr;
-		auto getTranslatedReadOperand = [&ctx](const BinaryNinja::SSAVariable& ssaVar, Instruction * placeholderInst) {
-			if (isMemorySSA(ctx, ssaVar)) {
-				auto allocInst = getMemoryVariableAllocInst(ctx, ssaVar);
+		auto getTranslatedReadOperand = [&ctx](
+				std::variant<const BinaryNinja::SSAVariable, const BinaryNinja::MediumLevelILInstruction> operand, Instruction * placeholderInst) -> Value *{
+			if (operand.index() == 0) {
+				auto ssaVar = std::get<0>(operand);
+				if (isMemorySSA(ctx, ssaVar)) {
+					auto allocInst = getMemoryVariableAllocInst(ctx, ssaVar);
+					auto loadInst = LoadInstruction::create(
+							LoadInstruction::BeforeInstruction(placeholderInst),
+							LoadInstruction::BitWidth(allocInst->getVariableBitWidth()),
+							allocInst
+							);
+					return loadInst;
+				} else {
+					return getSSAVariableValue(ctx, ssaVar);
+				}
+			} else {
+				auto expr = std::get<1>(operand);
+				auto expr_id = expr.exprIndex;
+				auto iter = ctx.exprId2Instruction.find(expr_id);
+				FATAL_UNLESS(iter != ctx.exprId2Instruction.end());
+				return iter->second;
 			}
-
-
 		};
 		switch (expr.operation) {
 			case BNMediumLevelILOperation::MLIL_NOP:
@@ -299,7 +318,9 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				break;
 			case BNMediumLevelILOperation::MLIL_ADD:
 				newInst = AddInstruction::create(
-						AddInstruction::AfterInstruction(placeholderInst)
+						AddInstruction::AfterInstruction(placeholderInst),
+						getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst),
+						getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst)
 						);
 				//TODO
 				//newInst->setBitWidth(expr.size * 8);

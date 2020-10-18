@@ -10,8 +10,8 @@
 #include "common.hpp"
 class Function;
 class ConstantInt;
-class Module : public Value,
-	public AddressableListConatiner<Function>
+class Module : virtual public Value,
+	virtual public AddressableListConatiner<Function>
 {
 	using Containter = std::map<uaddr_t, std::shared_ptr<Function>>;
 

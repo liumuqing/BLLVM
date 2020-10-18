@@ -15,7 +15,7 @@ class Function;
 class Instruction;
 class BasicBlock:
 	virtual public Value,
-	virtual public AddressableListContainerItem<BasicBlock, Function>,
+	virtual public AddressableListContainerItem<BasicBlock>,
 	virtual public ListConatiner<Instruction>
 {
 	using Self = BasicBlock;
@@ -32,7 +32,7 @@ public:
 	std::shared_ptr<Instruction> removeInstruction(Instruction * inst);
 	virtual ~BasicBlock() {};
 	//friend class AddressedMixin<BasicBlock>;
-	friend class ListContainerItem<BasicBlock, Function>;
+	friend class ListContainerItem<BasicBlock>;
 	//friend class AddressableListContainerItem<BasicBlock, Function>;
 protected:
 	BasicBlock() {};

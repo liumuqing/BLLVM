@@ -12,81 +12,51 @@
 
 template <typename T> class ListConatiner;
 template <typename T> class AddressableListConatiner;
-template <typename Self, typename Parent> class ListContainerItem;
-template <typename Self, typename Parent> class AddressableListContainerItem;
+template <typename Self> class ListContainerItem;
+template <typename Self> class AddressableListContainerItem;
 
 class WithWidthMixin{
 public:
 	// return 0 if not set
-	size_t getBitWidth() const {
-		return width_;
-	}
-	virtual void setBitWidth(size_t width) {
-		FATAL_UNLESS(width == 0 || width == 1 || width % 8 == 0);
-		width_ = width;
-	}
-	size_t getByteWidth() const {
-		FATAL_UNLESS(width_ % 8 != 0);
-		return width_ / 8;
-	}
-	void setByteWidth(size_t width) {
-		width_ = width * 8;
-	}
+	size_t getBitWidth() const;
+	virtual void setBitWidth(size_t width);
+	size_t getByteWidth() const;
+	void setByteWidth(size_t width);
 private:
 	size_t width_ = 0;
 };
-template <typename Parent>
-class WithParentMixin {
+class WithParentMixin{
 public:
-	Parent * getParent() const {
+	Value * getParent() const {
 		if (not this->parent_.has_value()) {
 			return nullptr;
 		}
 		FATAL_UNLESS(this->parent_.has_value());
 		FATAL_UNLESS(not this->parent_.value().expired());
-		auto p = this->parent_.value().lock().get();
-		auto retv = dynamic_cast<Parent *>(p);
-
-		// cast succ
-		FATAL_UNLESS(p == retv);
+		auto retv = this->parent_.value().lock().get();
 		return retv;
-	}
-
-protected:
-	//these method must be protected...
-	//they are used only by ListConatiner
-	void setParent(std::nullptr_t parent) {
-		this->parent_ = std::nullopt;
-	}
-	virtual void setParent(Parent * parent) {
-		auto p = dynamic_cast<Value*>(parent);
-
-		// cast succ
-		FATAL_UNLESS(p == parent);
-		setParent(p);
 	}
 	void setParent(Value * parent) {
 		if (parent == nullptr) {
 			this->parent_ = std::nullopt;
-			return;
+		} else {
+			this->parent_ = parent->weak_from_this();
 		}
-		FATAL_UNLESS(not this->parent_.has_value());
-		this->parent_ = parent->shared_from_this<Value>();
-		FATAL_UNLESS(this->parent_);
 	}
 private:
 	std::optional<std::weak_ptr<Value>> parent_;
 };
-template <typename Self, typename Parent>
+template <typename Self>
 class ListContainerItem:
-	virtual public WithParentMixin<Parent>{
+	virtual public Value,
+	virtual public WithParentMixin {
 public:
 	static inline std::shared_ptr<Self> create() {
 		std::shared_ptr<Self> retv = std::shared_ptr<Self>(new Self());
 		FATAL_UNLESS(retv);
 		return retv;
 	}
-	static inline Self* create(Parent* parent) {
+	static inline Self* create(ListConatiner<Self> * parent) {
 		auto retv = create();
 		parent->push_back(retv);
 		return retv.get();
@@ -98,10 +68,13 @@ public:
 	}
 	std::shared_ptr<Self> removeFromParent() {
 		FATAL_UNLESS(this->getParent());
-		auto retv = this->getParent()->remove(dynamic_cast<Self*>(this));
+
+		auto parent = dynamic_cast<ListConatiner<Self> *>(this->getParent());
+		FATAL_UNLESS(parent);
+
+		auto retv = parent->remove(this);
 		return retv;
 	}
-
 
 private:
 	ListContainerItem(const ListContainerItem&) = delete;
@@ -139,7 +112,9 @@ private:
 };
 
 template <typename T>
-class ListConatiner: private std::list<std::shared_ptr<T>> {
+class ListConatiner:
+	virtual public Value,
+	private std::list<std::shared_ptr<T>> {
 	using Base = std::list<std::shared_ptr<T>>;
 public:
 	using iterator = typename Base::iterator;
@@ -165,7 +140,7 @@ public:
 	}
 
 
-	virtual std::shared_ptr<T> remove(T *item);
+	virtual std::shared_ptr<T> remove(ListContainerItem<T> *item);
 
 	void push_back(std::shared_ptr<T> item) {
 		if (item->getParent()) {
@@ -208,26 +183,26 @@ public:
 	}
 };
 
-template <typename Self, typename Parent>
-class AddressableListContainerItem: virtual public AddressableMixin, virtual public ListContainerItem<Self, Parent>{
+template <typename Self>
+class AddressableListContainerItem: virtual public AddressableMixin, virtual public ListContainerItem<Self>{
 public:
 	static inline std::shared_ptr<Self> create() {
-		return ListContainerItem<Self, Parent>::create();
+		return ListContainerItem<Self>::create();
 	}
-	static inline Self* create(Parent* parent) {
-		return ListContainerItem<Self, Parent>::create(parent);
+	static inline Self* create(ListConatiner<Self>* parent) {
+		return ListContainerItem<Self>::create(parent);
 	}
-	static inline std::shared_ptr<Self> create(Parent *parent, uaddr_t address) {
+	static inline std::shared_ptr<Self> create(ListConatiner<Self> *parent, uaddr_t address) {
 		auto retv = create(address);
 		parent->push_back(retv);
 		return retv;
 	}
 	static inline std::shared_ptr<Self> create(uaddr_t address) {
-		auto retv = ListContainerItem<Self, Parent>::create();
+		auto retv = ListContainerItem<Self>::create();
 		retv->setAddress(address);
 		return retv;
 	}
-	static inline std::shared_ptr<Self> create(std::shared_ptr<Parent> parent, uaddr_t address) {
+	static inline std::shared_ptr<Self> create(std::shared_ptr<ListConatiner<Self>> parent, uaddr_t address) {
 		return create(parent.get(), address);
 	}
 

@@ -44,8 +44,8 @@ enum Opcode {
 class Instruction:
 	virtual public Value,
 	virtual public WithWidthMixin,
-	virtual public WithParentMixin<BasicBlock>,
-	virtual public ListContainerItem<Instruction, BasicBlock>,
+	virtual public WithParentMixin,
+	virtual public ListContainerItem<Instruction>,
 	virtual public User{
 protected:
 
@@ -70,6 +70,7 @@ protected:
 
 public:
 	DEFINE_CONFIG_TYPE(BitWidth, size_t);
+	DEFINE_CONFIG_TYPE(BeginOfBasicBlock, Instruction *);
 	DEFINE_CONFIG_TYPE(EndOfBasicBlock, BasicBlock *);
 	DEFINE_CONFIG_TYPE(AfterInstruction, Instruction *);
 	DEFINE_CONFIG_TYPE(BeforeInstruction, Instruction *);
@@ -99,6 +100,7 @@ private:
 	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::EndOfBasicBlock bbl);
 	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::BeforeInstruction pos);
 	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::AfterInstruction pos);
+	template <typename InstructionType> friend inline auto configInstruction(std::shared_ptr<InstructionType> self, Instruction::BeginOfBasicBlock bbl);
 };
 
 template <typename InstructionType, typename ConfigValue> inline InstructionType* configInstruction(InstructionType *self, ConfigValue value) {
@@ -202,3 +204,4 @@ inline auto configInstruction(std::shared_ptr<AllocInstruction> self, AllocInstr
 	self->setVariableBitWidth(width);
 	return self;
 }
+class LoadInstruction: virtual public InstructionKind<LoadInstruction, LOAD> {};

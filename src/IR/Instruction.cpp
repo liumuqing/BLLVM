@@ -9,11 +9,19 @@ void Instruction::pushToBBL(BasicBlock * bbl) {
 }
 void Instruction::insertSelfAfter(Instruction * pos) {
 	FATAL_UNLESS(not this->getParent());
-	auto parent = pos->getParent();
+	FATAL_UNLESS(pos->getParent());
+
+	auto parent = dynamic_cast<BasicBlock *>(pos->getParent());
+	FATAL_UNLESS(parent);
+
 	parent->insertInstructionAfter(pos, this->shared_from_this<Instruction>());
 }
 void Instruction::insertSelfBefore(Instruction * pos) {
 	FATAL_UNLESS(not this->getParent());
-	auto parent = pos->getParent();
+	FATAL_UNLESS(pos->getParent());
+
+	auto parent = dynamic_cast<BasicBlock *>(pos->getParent());
+	FATAL_UNLESS(parent);
+
 	parent->insertInstructionBefore(pos, this->shared_from_this<Instruction>());
 }

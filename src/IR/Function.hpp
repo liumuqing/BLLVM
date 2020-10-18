@@ -8,7 +8,7 @@ class BasicBlock;
 class Parameter;
 class Function:
 	virtual public Value,
-	virtual public AddressableListContainerItem<Function, Module>,
+	virtual public AddressableListContainerItem<Function>,
 	virtual public AddressableListConatiner<BasicBlock>
 {
 public:
@@ -36,13 +36,13 @@ protected:
 private:
 	std::vector<std::shared_ptr<Parameter>> params_;
 
-friend class ListContainerItem<Function, Module>;
+friend class ListContainerItem<Function>;
 };
 
 class Parameter:
 	virtual public Value,
 	virtual public WithWidthMixin,
-	virtual public WithParentMixin<Function>
+	virtual public WithParentMixin
 {
 public:
 	virtual ~Parameter(){};
