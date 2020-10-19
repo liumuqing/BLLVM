@@ -107,7 +107,7 @@ private:
 
 template <typename InstructionType, typename ConfigValue> inline InstructionType* configInstruction(InstructionType *self, ConfigValue value) {
 	auto pointer = self->template shared_from_this<InstructionType>();
-	configInstruction(pointer, value.getValue());
+	configInstruction(pointer, value);
 	return self;
 }
 //template <typename InstructionType, typename ConfigValue> inline auto configInstruction(std::shared_ptr<InstructionType> self, ConfigValue value);
@@ -290,3 +290,4 @@ inline auto configInstruction(std::shared_ptr<AllocInstruction> self, AllocInstr
 	return self;
 }
 class LoadInstruction: virtual public InstructionKind<LoadInstruction, LOAD> {};
+class StoreInstruction: virtual public InstructionKind<StoreInstruction, STORE> {};

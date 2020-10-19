@@ -131,7 +131,8 @@ BasicBlock* liftBasicBlock(std::map<BinaryNinja::ExprId, Instruction *>& exprId2
 static size_t getBitWidthOfVariable(LiftFunctionContext& ctx, const BinaryNinja::Variable& var) {
 	auto paramaterType = ctx.ssa_form->GetFunction()->GetVariableType(var);
 	if (not paramaterType) {
-		FATAL("BinaryNinja cannot infer parameter's type...");
+		WARN("BinaryNinja cannot infer variable's type..., return as 0");
+		return 0;
 	}
 	return paramaterType->GetWidth() * 8;
 }
@@ -313,9 +314,31 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 		auto replaceWith = [&ctx](BinaryNinja::ExprId expr_id, Instruction * value) {
 			FATAL_UNLESS(ctx.exprId2Instruction.contains(expr_id));
 
+			auto expr = ctx.ssa_form->GetExpr(expr_id);
+			auto inst_id = ctx.ssa_form->GetInstructionForExpr(expr_id);
+			if (ctx.ssa_form->GetIndexForInstruction(inst_id) == expr_id) {
+				ctx.instId2Instruction[inst_id] = value;
+			}
+
 			auto old_value = ctx.exprId2Instruction[expr_id];
 			old_value->replaceUsesWith(value);
 			ctx.exprId2Instruction[expr_id] = value;
+		};
+		auto writeSSAvariable = [&ctx](BinaryNinja::SSAVariable ssaVar, Instruction * value) -> void {
+			if (isMemorySSA(ctx, ssaVar)) {
+				auto store_inst = StoreInstruction::create(
+						StoreInstruction::BitWidth(getBitWidthOfSSAVariable(ctx, ssaVar)),
+						StoreInstruction::AfterInstruction(value),
+						getMemoryVariableAllocInst(ctx, ssaVar),
+						value
+						);
+				return;
+			}
+			else {
+				auto old_value = getSSAVariableValue(ctx, ssaVar);
+				old_value->replaceUsesWith(value);
+				ctx.SSAVariableToInst[ssaVar] = value->shared_from_this();
+			}
 		};
 		switch (expr.operation) {
 			#define DEFINE_BINARY_INSTRUCTION(bn_opcode, InstructionType) \
@@ -387,10 +410,22 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 					for (auto operand: expr.GetParameterExprs()) {
 						callInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
 					}
-					
+
+					switch (outputSSAVars.size()) {
+						case 0:
+							break;
+						case 1:
+						default:
+							writeSSAvariable(outputSSAVars[0], callInst);
+							break;
+					}
 					break;
 				}
-
+			case BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA: {
+				newInst = NopInstruction::create(
+						NopInstruction::AfterInstruction(placeholderInst)
+						);
+			}
 
 		}
 
