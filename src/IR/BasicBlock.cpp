@@ -1,4 +1,6 @@
 #include "IR/BasicBlock.hpp"
+#include "IR/Instruction.hpp"
+#include "IR/Function.hpp"
 #include "common.hpp"
 std::shared_ptr<Instruction> BasicBlock::removeInstruction(Instruction * inst) {
 	return remove(inst);

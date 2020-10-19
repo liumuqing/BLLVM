@@ -21,6 +21,9 @@
 #include <filesystem>
 
 #include "ModuleLoader/BinaryNinjaModuleLoader.hpp"
+#include "IR/Function.hpp"
+#include "IR/BasicBlock.hpp"
+#include "IR/Instruction.hpp"
 
 // define main as weak symbol, so we can rewrite in test
 __attribute__((weak))
@@ -46,5 +49,14 @@ int main(int argc, const char *argv[]) {
 
 	auto module_loader = std::make_unique<BinaryNinjaModuleLoader>();
 	module_loader->open(input_path.c_str());
-	module_loader->lift();
+	auto module = module_loader->lift();
+	for (auto function: *module) {
+		printf("function_%p\n", function.get());
+		for (auto bbl: *function) {
+			printf("bbl_%p\n", bbl.get());
+			for (auto inst: *bbl) {
+				printf("%d\n", inst->getOpcode());
+			}
+		}
+	}
 }

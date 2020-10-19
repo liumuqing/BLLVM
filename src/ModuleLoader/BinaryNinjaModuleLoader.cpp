@@ -283,7 +283,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 
 
 
-	for (auto &&[expr_id, placeholderInst]: ctx.exprId2Instruction) {
+	for (auto [expr_id, placeholderInst]: ctx.exprId2Instruction) {
 		//translate each expr to Instruction
 		auto expr = ssa_form->GetExpr(expr_id);
 		Instruction * newInst = nullptr;
@@ -316,26 +316,53 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 						NopInstruction::AfterInstruction(placeholderInst)
 						);
 				break;
-			case BNMediumLevelILOperation::MLIL_ADD:
-				newInst = AddInstruction::create(
-						AddInstruction::AfterInstruction(placeholderInst),
-						getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst),
-						getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst)
-						);
-				//TODO
-				//newInst->setBitWidth(expr.size * 8);
-				break;
+			#define DEFINE_BINARY_INSTRUCTION(bn_opcode, InstructionType) \
+			case BNMediumLevelILOperation::bn_opcode: { \
+					newInst = InstructionType::create( \
+						InstructionType::AfterInstruction(placeholderInst),\
+						InstructionType::BitWidth(expr.size * 8),\
+						getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst),\
+						getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst)\
+						);\
+					break;\
+				}
+			DEFINE_BINARY_INSTRUCTION(MLIL_SUB, SubInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_ADD, AddInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_MUL, MulInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_DIVU, UDivInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_DIVS, SDivInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_MODU, URemInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_MODS, SRemInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_AND, AndInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_OR, OrInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_XOR, XorInstruction);
+			#undef DEFINE_BINARY_INSTRUCTION
+
+			#define DEFINE_UNARY_INSTRUCTION(bn_opcode, InstructionType) \
+			case BNMediumLevelILOperation::bn_opcode: { \
+					newInst = InstructionType::create( \
+						InstructionType::AfterInstruction(placeholderInst),\
+						InstructionType::BitWidth(expr.size * 8),\
+						getTranslatedReadOperand(expr.GetOperands()[0].GetExpr(), placeholderInst)\
+						);\
+					break;\
+				}
+			DEFINE_UNARY_INSTRUCTION(MLIL_ZX, UnsignedExtendInstruction);
+			DEFINE_UNARY_INSTRUCTION(MLIL_SX, SignedExtendInstruction);
+
+
+			#undef DEFINE_UNARY_INSTRUCTION
 
 
 		}
-		//Let's replace placeholderInst to newInst;
+
 		if (newInst) {
 			placeholderInst->replaceUsesWith(newInst);
 			placeholderInst->removeFromParent();
+			ctx.exprId2Instruction[expr_id] = newInst;
 		} else {
 			WARN("Inst cannot be translated? PlaceHolder kept as Undefined");
 		}
-
 	}
 
 
@@ -353,11 +380,13 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 std::shared_ptr<Module> BinaryNinjaModuleLoader::lift() {
 	std::shared_ptr<Module> module = std::make_shared<Module>();
 	for (auto function: binary_view->GetAnalysisFunctionList()) {
-		auto mlil = function->GetMediumLevelILIfAvailable();
+		//auto mlil = function->GetMediumLevelILIfAvailable();
+		auto mlil = function->GetMediumLevelIL();
 		if (!mlil) {
 			LOG_INFO << "lifting function " << std::hex << function->GetStart() << "failed, skip";
 			continue;
 		}
+		LOG_INFO << "lifting function " << std::hex << function->GetStart() << " " << mlil.GetPtr() << "start";
 		auto ssa_form = mlil->GetSSAForm();
 		if (!ssa_form) {
 			LOG_INFO << "lifting function " << std::hex << function->GetStart() << " to ssa_form failed, skip";

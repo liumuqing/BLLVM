@@ -1,7 +1,8 @@
 #pragma once
 #include "IR/AddressedItem.hpp"
 #include "IR/User.hpp"
-#include "IR/BasicBlock.hpp"
+//#include "IR/BasicBlock.hpp"
+class BasicBlock;
 enum Opcode {
 	NOP,
 	ALLOC,
@@ -15,11 +16,11 @@ enum Opcode {
 	LSL,
 	LSR,
 	ASR,
-	DIV,
+	SDIV,
+	UDIV,
 	MUL,
-	MOD,
-	SMUL,
-	SMOD,
+	UREM,
+	SREM,
 	CONST,
 	ZX,
 	SX,
@@ -41,6 +42,7 @@ enum Opcode {
 	RETURN,
 	UNREACHABLE,
 };
+
 class Instruction:
 	virtual public Value,
 	virtual public WithWidthMixin,
@@ -154,6 +156,9 @@ public:
 };
 
 
+class UnaryInstruction: virtual public Instruction {
+};
+
 class BinaryInstruction: virtual public Instruction {
 	private:
 		void makeSureAtLeastTwoOperands() {
@@ -181,10 +186,69 @@ class BinaryInstruction: virtual public Instruction {
 };
 class UndefiendInstruction: virtual public InstructionKind<UndefiendInstruction, UNDEF> {};
 class NopInstruction: virtual public InstructionKind<NopInstruction, NOP> {};
+
 class AddInstruction:
 	virtual public InstructionKind<AddInstruction, ADD>,
 	virtual public BinaryInstruction {
 };
+class SubInstruction:
+	virtual public InstructionKind<SubInstruction, SUB>,
+	virtual public BinaryInstruction {
+};
+class MulInstruction:
+	virtual public InstructionKind<MulInstruction, MUL>,
+	virtual public BinaryInstruction {
+};
+class SRemInstruction:
+	virtual public InstructionKind<SRemInstruction, SREM>,
+	virtual public BinaryInstruction {
+};
+class URemInstruction:
+	virtual public InstructionKind<URemInstruction, UREM>,
+	virtual public BinaryInstruction {
+};
+class SDivInstruction:
+	virtual public InstructionKind<SDivInstruction, SDIV>,
+	virtual public BinaryInstruction {
+};
+class UDivInstruction:
+	virtual public InstructionKind<UDivInstruction, UDIV>,
+	virtual public BinaryInstruction {
+};
+
+class AndInstruction:
+	virtual public InstructionKind<AndInstruction, AND>,
+	virtual public BinaryInstruction {
+};
+class OrInstruction:
+	virtual public InstructionKind<OrInstruction, OR>,
+	virtual public BinaryInstruction {
+};
+class XorInstruction:
+	virtual public InstructionKind<XorInstruction, XOR>,
+	virtual public BinaryInstruction {
+};
+
+class NotInstruction:
+	virtual public InstructionKind<NotInstruction, NOT>,
+	virtual public UnaryInstruction{
+};
+
+class NegInstruction:
+	virtual public InstructionKind<NegInstruction, NEG>,
+	virtual public UnaryInstruction{
+};
+
+class UnsignedExtendInstruction:
+	virtual public InstructionKind<UnsignedExtendInstruction, ZX>,
+	virtual public UnaryInstruction{
+};
+
+class SignedExtendInstruction:
+	virtual public InstructionKind<SignedExtendInstruction, SX>,
+	virtual public UnaryInstruction{
+};
+	
 class AllocInstruction: virtual public InstructionKind<AllocInstruction, ALLOC> {
 	public:
 		DEFINE_CONFIG_TYPE(VariableBitWidth, size_t);

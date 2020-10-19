@@ -4,7 +4,7 @@
 #include "AddressedItem.hpp"
 #include "common.hpp"
 #include "IR/Value.hpp"
-#include "IR/Function.hpp"
+//#include "IR/Function.hpp"
 #include "IR/Instruction.hpp"
 
 #include "common.hpp"
