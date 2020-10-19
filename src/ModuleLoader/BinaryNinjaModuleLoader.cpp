@@ -310,12 +310,14 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				return iter->second;
 			}
 		};
+		auto replaceWith = [&ctx](BinaryNinja::ExprId expr_id, Instruction * value) {
+			FATAL_UNLESS(ctx.exprId2Instruction.contains(expr_id));
+
+			auto old_value = ctx.exprId2Instruction[expr_id];
+			old_value->replaceUsesWith(value);
+			ctx.exprId2Instruction[expr_id] = value;
+		};
 		switch (expr.operation) {
-			case BNMediumLevelILOperation::MLIL_NOP:
-				newInst = NopInstruction::create(
-						NopInstruction::AfterInstruction(placeholderInst)
-						);
-				break;
 			#define DEFINE_BINARY_INSTRUCTION(bn_opcode, InstructionType) \
 			case BNMediumLevelILOperation::bn_opcode: { \
 					newInst = InstructionType::create( \
@@ -349,17 +351,56 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				}
 			DEFINE_UNARY_INSTRUCTION(MLIL_ZX, UnsignedExtendInstruction);
 			DEFINE_UNARY_INSTRUCTION(MLIL_SX, SignedExtendInstruction);
-
-
+			DEFINE_UNARY_INSTRUCTION(MLIL_NOT, NotInstruction);
+			DEFINE_UNARY_INSTRUCTION(MLIL_NEG, NegInstruction);
 			#undef DEFINE_UNARY_INSTRUCTION
+
+			case BNMediumLevelILOperation::MLIL_NOP:
+				newInst = NopInstruction::create(
+						NopInstruction::AfterInstruction(placeholderInst)
+						);
+				break;
+			case BNMediumLevelILOperation::MLIL_CALL_SSA:
+				{
+					auto target = getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst);
+					auto outputSSAVars = expr.GetOutputSSAVariables();
+					auto bitSize = 0;
+					switch (outputSSAVars.size()) {
+						case 0:
+							bitSize = 0;
+							break;
+						case 1:
+							bitSize = getBitWidthOfSSAVariable(ctx, outputSSAVars[0]);
+							break;
+						default:
+							bitSize = getBitWidthOfSSAVariable(ctx, outputSSAVars[0]);
+							WARN("call inst have multiple output");
+							break;
+					}
+					newInst = NopInstruction::create(
+							NopInstruction::AfterInstruction(placeholderInst)
+							);
+					auto callInst = CallInstruction::create(
+							CallInstruction::AfterInstruction(placeholderInst),
+							CallInstruction::BitWidth(bitSize)
+							);
+					for (auto operand: expr.GetParameterExprs()) {
+						callInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
+					}
+					
+					break;
+				}
 
 
 		}
 
 		if (newInst) {
+			replaceWith(expr_id, newInst);
+			/*
 			placeholderInst->replaceUsesWith(newInst);
 			placeholderInst->removeFromParent();
 			ctx.exprId2Instruction[expr_id] = newInst;
+			*/
 		} else {
 			WARN("Inst cannot be translated? PlaceHolder kept as Undefined");
 		}

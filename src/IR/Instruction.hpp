@@ -248,6 +248,27 @@ class SignedExtendInstruction:
 	virtual public InstructionKind<SignedExtendInstruction, SX>,
 	virtual public UnaryInstruction{
 };
+
+class CallInstruction:
+	virtual public InstructionKind<CallInstruction, CALL> {
+	Value * getCallee() const {
+		return getOperand(0);
+	}
+	void setCallee(Value * callee) {
+		return setOperand(0, callee);
+	}
+	size_t countOfArgument() const {
+		FATAL_UNLESS(this->getNumOperands() >= 1);
+		return this->getNumOperands() - 1;
+	}
+	Value * getArgument(size_t index) const {
+		FATAL_UNLESS(index < countOfArgument());
+		return getOperand(index+1);
+	}
+	void setArgument(size_t index, Value * arg) {
+		setOperand(index+1, arg);
+	}
+};
 	
 class AllocInstruction: virtual public InstructionKind<AllocInstruction, ALLOC> {
 	public:
