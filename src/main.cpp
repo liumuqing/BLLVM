@@ -55,7 +55,7 @@ int main(int argc, const char *argv[]) {
 		for (auto bbl: *function) {
 			printf("bbl_%p\n", bbl.get());
 			for (auto inst: *bbl) {
-				printf("%d\n", inst->getOpcode());
+				printf("%s\n", inst->getOpstr());
 			}
 		}
 	}

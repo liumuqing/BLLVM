@@ -1,6 +1,16 @@
 #include "IR/Instruction.hpp"
 #include "IR/BasicBlock.hpp"
 
+const char * Instruction::getOpstr() const {
+	FATAL_UNLESS(getOpcode() < sizeof(OpStr)/sizeof(OpStr[0]));
+	return OpStr[getOpcode()];
+}
+const char * OpStr[OPCODE_COUNT] {
+	#define HANDLE_INST(opcode) #opcode,
+	#include "IR/Instruction.def"
+	#undef HANDLE_INST
+};
+
 extern template class InstructionKind<UndefiendInstruction, UNDEF>;
 
 void Instruction::pushToBBL(BasicBlock * bbl) {

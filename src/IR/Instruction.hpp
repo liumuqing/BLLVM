@@ -1,47 +1,16 @@
 #pragma once
 #include "IR/AddressedItem.hpp"
 #include "IR/User.hpp"
-//#include "IR/BasicBlock.hpp"
+
 class BasicBlock;
 enum Opcode {
-	NOP,
-	ALLOC,
-	ADD,
-	SUB,
-	XOR,
-	OR,
-	AND,
-	NEG,
-	NOT,
-	LSL,
-	LSR,
-	ASR,
-	SDIV,
-	UDIV,
-	MUL,
-	UREM,
-	SREM,
-	CONST,
-	ZX,
-	SX,
-	LOAD,
-	STORE,
-	LOAD_STACK,
-	STORE_STACK,
-	CMP_EQ,
-	CMP_LT,
-	CALL,
-	CONST_INT,
-	PHI,
-	//BBL Terminator
-	SWITCH,
-	BRANCH,
-	//Anything, float instruction, etc
-	UNDEF,
-	//Function Terminator
-	RETURN,
-	UNREACHABLE,
+	#define HANDLE_INST(opcode) opcode,
+	#include "IR/Instruction.def"
+	#undef HANDLE_INST
+	OPCODE_COUNT,
 };
+
+extern const char * OpStr[OPCODE_COUNT];
 
 class Instruction:
 	virtual public Value,
@@ -88,6 +57,7 @@ public:
 
 	//void setOpcode(Opcode opcode);
 	virtual Opcode getOpcode() const = 0;
+	const char * getOpstr() const;
 protected:
 	Instruction(){};
 	void insertSelfAfter(Instruction * pos);
