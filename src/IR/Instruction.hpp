@@ -156,6 +156,7 @@ class BinaryInstruction: virtual public Instruction {
 };
 class UndefiendInstruction: virtual public InstructionKind<UndefiendInstruction, UNDEF> {};
 class NopInstruction: virtual public InstructionKind<NopInstruction, NOP> {};
+class MovInstruction: virtual public InstructionKind<MovInstruction, MOV> {};
 
 class AddInstruction:
 	virtual public InstructionKind<AddInstruction, ADD>,
@@ -261,3 +262,5 @@ inline auto configInstruction(std::shared_ptr<AllocInstruction> self, AllocInstr
 }
 class LoadInstruction: virtual public InstructionKind<LoadInstruction, LOAD> {};
 class StoreInstruction: virtual public InstructionKind<StoreInstruction, STORE> {};
+
+class PhiInstruction: virtual public InstructionKind<PhiInstruction, PHI> {};

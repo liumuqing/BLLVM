@@ -2,6 +2,7 @@
 #include <cstddef> //size_t
 #include <memory>
 #include <vector>
+#include <optional>
 
 #include "common.hpp"
 
@@ -31,7 +32,7 @@ class Use {
 			//We should set parent null here...
 			//But ~Use will FATAL_UNLESS(parent != nullptr)
 			//other.parent = nullptr;
-			other.value = nullptr;
+			other.value = std::nullopt;
 			other.next = nullptr;
 			other.prev = nullptr;
 		}
@@ -45,10 +46,16 @@ class Use {
 		}
 
 		Value * getValue() const {
-			return this->value;
+			if (this->value.has_value()) {
+				return this->value.value().lock().get();
+			}
+			return nullptr;
 		}
 		Value * getValue() {
-			return this->value;
+			if (this->value.has_value()) {
+				return this->value.value().lock().get();
+			}
+			return nullptr;
 		}
 		void setValue(Value * newValue);
 
@@ -90,7 +97,7 @@ class Use {
 		}
 	private:
 		User * parent = nullptr;
-		Value * value = nullptr;
+		std::optional<std::weak_ptr<Value>> value;
 		Use * next = nullptr;
 		Use ** prev = nullptr;
 };

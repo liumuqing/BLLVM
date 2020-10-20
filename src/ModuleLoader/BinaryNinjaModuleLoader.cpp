@@ -205,6 +205,7 @@ auto getSSAVariableValue(LiftFunctionContext& ctx, const BinaryNinja::SSAVariabl
 		auto inst_id = ctx.ssa_form->GetSSAVarDefinition(ssaVar);
 		if (inst_id >= ctx.ssa_form->GetInstructionCount()) {
 			auto newInst = UndefiendInstruction::create();
+
 			ctx.entryBasicBlock->insertInstructionAtBegin(newInst);
 
 			auto [newIter, isInserted] = ctx.SSAVariableToInst.insert(std::make_pair(ssaVar, newInst));
@@ -229,22 +230,21 @@ auto getSSAVariableValue(LiftFunctionContext& ctx, const BinaryNinja::SSAVariabl
 	return iter->second.get();
 }
 
-AllocInstruction *getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
-	FATAL_UNLESS(isMemorySSA(ctx, ssaVar));
-	auto iter = ctx.memoryVariableToAllocInst.find(ssaVar.var);
+AllocInstruction *getMemoryVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::Variable& var) {
+	auto iter = ctx.memoryVariableToAllocInst.find(var);
 	if (iter == ctx.memoryVariableToAllocInst.end()){
 		size_t pointerSizeInBits = ctx.ssa_form->GetFunction()->GetPlatform()->GetArchitecture()->GetAddressSize() * 8;
 		FATAL_UNLESS(pointerSizeInBits == 16 || pointerSizeInBits == 32 || pointerSizeInBits == 64);
 
 		auto new_inst = AllocInstruction::create(
 				AllocInstruction::BitWidth(pointerSizeInBits),
-				AllocInstruction::VariableBitWidth(getBitWidthOfSSAVariable(ctx, ssaVar))
+				AllocInstruction::VariableBitWidth(getBitWidthOfVariable(ctx, var))
 				);
 		//new_inst->setAllocatedBitSize(getBitWidthOfSSAVariable(ctx, ssaVar));
 		//new_inst->setBitWidth(pointerSizeInBits);
 		ctx.entryBasicBlock->insertInstructionAtBegin(new_inst);
 
-		auto [newIter, isInserted] = ctx.memoryVariableToAllocInst.insert(std::make_pair(ssaVar.var, new_inst));
+		auto [newIter, isInserted] = ctx.memoryVariableToAllocInst.insert(std::make_pair(var, new_inst));
 		FATAL_UNLESS(isInserted);
 
 		iter = newIter;
@@ -252,6 +252,11 @@ AllocInstruction *getMemoryVariableAllocInst(LiftFunctionContext& ctx, const Bin
 
 	FATAL_UNLESS(iter != ctx.memoryVariableToAllocInst.end());
 	return iter->second.get();
+}
+
+AllocInstruction *getMemorySSAVariableAllocInst(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
+	FATAL_UNLESS(isMemorySSA(ctx, ssaVar));
+	return getMemoryVariableAllocInst(ctx, ssaVar.var);
 }
 
 Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form) {
@@ -273,6 +278,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 	//Set entry bbl in ctx
 	auto entryBNBBL = ctx.ssa_form->GetBasicBlockForInstruction(0);
 	FATAL_UNLESS(entryBNBBL);
+	FATAL_UNLESS(ctx.bnBB2BB.contains(entryBNBBL));
 	ctx.entryBasicBlock = ctx.bnBB2BB[entryBNBBL];
 
 
@@ -291,11 +297,12 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 		auto expr = ssa_form->GetExpr(expr_id);
 		Instruction * newInst = nullptr;
 		auto getTranslatedReadOperand = [&ctx](
-				std::variant<const BinaryNinja::SSAVariable, const BinaryNinja::MediumLevelILInstruction> operand, Instruction * placeholderInst) -> Value *{
+				std::variant<const BinaryNinja::SSAVariable, const BinaryNinja::MediumLevelILInstruction> operand,
+				Instruction * placeholderInst) -> Value *{
 			if (operand.index() == 0) {
 				auto ssaVar = std::get<0>(operand);
 				if (isMemorySSA(ctx, ssaVar)) {
-					auto allocInst = getMemoryVariableAllocInst(ctx, ssaVar);
+					auto allocInst = getMemorySSAVariableAllocInst(ctx, ssaVar);
 					auto loadInst = LoadInstruction::create(
 							LoadInstruction::BeforeInstruction(placeholderInst),
 							LoadInstruction::BitWidth(allocInst->getVariableBitWidth()),
@@ -331,15 +338,23 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				auto store_inst = StoreInstruction::create(
 						StoreInstruction::BitWidth(getBitWidthOfSSAVariable(ctx, ssaVar)),
 						StoreInstruction::AfterInstruction(value),
-						getMemoryVariableAllocInst(ctx, ssaVar),
+						getMemorySSAVariableAllocInst(ctx, ssaVar),
 						value
 						);
 				return;
 			}
 			else {
-				auto old_value = getSSAVariableValue(ctx, ssaVar);
-				old_value->replaceUsesWith(value);
-				ctx.SSAVariableToInst[ssaVar] = value->shared_from_this();
+				//return;
+				auto old_value = dynamic_cast<Instruction *>(getSSAVariableValue(ctx, ssaVar));
+				auto new_inst = MovInstruction::create(
+						MovInstruction::AfterInstruction(value),
+						MovInstruction::BitWidth(value->getBitWidth()),
+						value
+						);
+				
+				old_value->replaceUsesWith(new_inst);
+				ctx.SSAVariableToInst[ssaVar] = new_inst->shared_from_this();
+				old_value->removeFromParent();
 			}
 		};
 		switch (expr.operation) {
@@ -365,6 +380,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				}
 			DEFINE_BINARY_INSTRUCTION(MLIL_SUB, SubInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_ADD, AddInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_ADD_OVERFLOW, AddInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_MUL, MulInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_DIVU, UDivInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_DIVS, SDivInstruction);
@@ -401,22 +417,43 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			};
 			case BNMediumLevelILOperation::MLIL_LOAD_STRUCT_SSA:
 			{
-				auto imm = placeholder
+				auto imm = ctx.module.lock()->getConstantInt(expr.GetDestExpr().size * 8, expr.GetOffset());
+				auto ptr = AddInstruction::create(
+						LoadInstruction::BeforeInstruction(placeholderInst),
+						LoadInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst),
+						imm
+						);
 				newInst = LoadInstruction::create(
 						LoadInstruction::AfterInstruction(placeholderInst),
 						LoadInstruction::BitWidth(expr.size * 8),
-						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
+						ptr
 						);
 				break;
 			};
-			case BNMediumLevelILOperation::MLIL_STORE_SSA:
-			{
 			case BNMediumLevelILOperation::MLIL_STORE_SSA:
 			{
 				newInst = StoreInstruction::create(
 						StoreInstruction::AfterInstruction(placeholderInst),
 						StoreInstruction::BitWidth(expr.size * 8),
 						getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
+						);
+				break;
+			};
+			case BNMediumLevelILOperation::MLIL_STORE_STRUCT_SSA:
+			{
+				auto imm = ctx.module.lock()->getConstantInt(expr.GetDestExpr().size * 8, expr.GetOffset());
+				auto ptr = AddInstruction::create(
+						LoadInstruction::BeforeInstruction(placeholderInst),
+						LoadInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst),
+						imm
+						);
+				newInst = StoreInstruction::create(
+						StoreInstruction::AfterInstruction(placeholderInst),
+						StoreInstruction::BitWidth(expr.size * 8),
+						ptr,
 						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
 						);
 				break;
@@ -439,13 +476,12 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 							WARN("call inst have multiple output");
 							break;
 					}
-					newInst = NopInstruction::create(
-							NopInstruction::AfterInstruction(placeholderInst)
-							);
 					auto callInst = CallInstruction::create(
 							CallInstruction::AfterInstruction(placeholderInst),
 							CallInstruction::BitWidth(bitSize)
 							);
+					//Target
+					callInst->appendOperands(getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst));
 					for (auto operand: expr.GetParameterExprs()) {
 						callInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
 					}
@@ -458,14 +494,89 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 							writeSSAvariable(outputSSAVars[0], callInst);
 							break;
 					}
+
+					newInst = NopInstruction::create(
+							NopInstruction::AfterInstruction(placeholderInst)
+							);
 					break;
 				}
 			case BNMediumLevelILOperation::MLIL_CALL_PARAM:
 			case BNMediumLevelILOperation::MLIL_CALL_OUTPUT:
 				FATAL("non-ssa binary ninja opcode?");
 				break;
+			case BNMediumLevelILOperation::MLIL_ADC:
+				{
+					auto addInst = AddInstruction::create(
+						AddInstruction::AfterInstruction(placeholderInst),
+						AddInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst),
+						getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst)
+						);
+					newInst = AddInstruction::create(
+						AddInstruction::AfterInstruction(placeholderInst),
+						AddInstruction::BitWidth(expr.size * 8),
+						addInst,
+						getTranslatedReadOperand(expr.GetCarryExpr(), placeholderInst)
+						);
+					break;
+				}
+			case BNMediumLevelILOperation::MLIL_SBB:
+				{
+					auto subInst = SubInstruction::create(
+						SubInstruction::AfterInstruction(placeholderInst),
+						SubInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst),
+						getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst)
+						);
+					newInst = SubInstruction::create(
+						SubInstruction::AfterInstruction(placeholderInst),
+						SubInstruction::BitWidth(expr.size * 8),
+						subInst,
+						getTranslatedReadOperand(expr.GetCarryExpr(), placeholderInst)
+						);
+					break;
+				}
+			case BNMediumLevelILOperation::MLIL_ADDRESS_OF:
+				{
+					newInst = MovInstruction::create(
+						MovInstruction::AfterInstruction(placeholderInst),
+						MovInstruction::BitWidth(expr.size * 8),
+						getMemoryVariableAllocInst(ctx, expr.GetSourceVariable())
+					);
+					break;
+				}
+			case BNMediumLevelILOperation::MLIL_ADDRESS_OF_FIELD:
+				{
+					auto imm = ctx.module.lock()->getConstantInt(expr.size * 8, expr.GetOffset());
+					newInst = AddInstruction::create(
+						AddInstruction::AfterInstruction(placeholderInst),
+						AddInstruction::BitWidth(expr.size * 8),
+						getMemoryVariableAllocInst(ctx, expr.GetSourceVariable()),
+						imm
+					);
+					break;
+				}
+			case BNMediumLevelILOperation::MLIL_VAR_PHI:
+				{
+					auto phiInst = PhiInstruction::create(
+							PhiInstruction::AfterInstruction(placeholderInst),
+							PhiInstruction::BitWidth(getBitWidthOfSSAVariable(ctx, expr.GetDestSSAVariable()))
+							);
+					for (auto operand: expr.GetSourceSSAVariables()) {
+						FATAL_UNLESS(operand != expr.GetDestSSAVariable());
+						phiInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
+					}
+					writeSSAvariable(expr.GetDestSSAVariable(), phiInst);
+
+					newInst = NopInstruction::create(
+							NopInstruction::AfterInstruction(placeholderInst)
+							);
+					break;
+				}
+			DEFINE_OPCODE_INSTRUCTION(MLIL_MEM_PHI, NopInstruction);
+
 			default:
-				FATAL("unhandled binary ninja opcode?");
+				//FATAL("unhandled binary ninja opcode?");
 				break;
 		}
 

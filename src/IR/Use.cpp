@@ -3,11 +3,15 @@
 #include "IR/Value.hpp"
 
 void Use::setValue(Value * newValue) {
-	if (this->value) {
+	if (this->value.has_value()) {
 		this->removeFromList();
-		this->value = nullptr;
+		this->value = std::nullopt;
 	}
-	this->value = newValue;
+
+	if (not newValue) {
+		return;
+	}
+	this->value = newValue->weak_from_this();
 	if (this->value) {
 		this->addToList(&newValue->useHead_);
 	}
@@ -20,5 +24,5 @@ void Use::removeFromList() {
 	}
 	this->prev = nullptr;
 	this->next = nullptr;
-	this->value = nullptr;
+	this->value = std::nullopt;
 }

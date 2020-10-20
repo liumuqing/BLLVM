@@ -23,10 +23,10 @@ public:
 	void insertInstructionAfter(const Instruction * insertPoint, std::shared_ptr<Instruction> inserted);
 	void insertInstructionBefore(const Instruction * insertPoint, std::shared_ptr<Instruction> inserted);
 	void insertInstructionAtBegin(std::shared_ptr<Instruction> inserted) {
-		insertInstructionAt(instructions_.begin(), inserted);
+		insertInstructionAt(begin(), inserted);
 	}
 	void insertInstructionAtEnd(std::shared_ptr<Instruction> inserted) {
-		insertInstructionAt(instructions_.end(), inserted);
+		insertInstructionAt(end(), inserted);
 	}
 	std::shared_ptr<Instruction> removeInstruction(Instruction * inst);
 	virtual ~BasicBlock() {};
@@ -38,6 +38,5 @@ protected:
 	BasicBlock(const Function&) = delete;
 
 private:
-	Conatiner instructions_;
     void insertInstructionAt(Conatiner::iterator it, std::shared_ptr<Instruction> inserted);
 };

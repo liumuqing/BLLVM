@@ -24,6 +24,9 @@
 #include "IR/Function.hpp"
 #include "IR/BasicBlock.hpp"
 #include "IR/Instruction.hpp"
+#include "IR/Constant.hpp"
+
+#include <unordered_map>
 
 // define main as weak symbol, so we can rewrite in test
 __attribute__((weak))
@@ -50,12 +53,41 @@ int main(int argc, const char *argv[]) {
 	auto module_loader = std::make_unique<BinaryNinjaModuleLoader>();
 	module_loader->open(input_path.c_str());
 	auto module = module_loader->lift();
+
+	std::unordered_map<Instruction *, size_t> inst2id;
+
+	auto getId = [&inst2id](Instruction * inst) -> size_t {
+		if (inst2id.contains(inst)) {
+			return inst2id[inst];
+		}
+		size_t retv = inst2id.size()+1;
+		inst2id[inst] = retv;
+		return retv;
+	};
+
 	for (auto function: *module) {
-		printf("function_%p\n", function.get());
+		inst2id.clear();
+		printf("function_%lx\n", function->getAddress());
 		for (auto bbl: *function) {
 			printf("bbl_%p\n", bbl.get());
 			for (auto inst: *bbl) {
-				printf("%s\n", inst->getOpstr());
+				printf("$%zu = %s ", getId(inst.get()), inst->getOpstr());
+				for (auto index = 0; index < inst->getNumOperands(); index ++) {
+					auto operand = inst->getOperand(index);
+					if (auto opInst = dynamic_cast<Instruction *>(operand)) {
+						printf("$%zu, ", getId(opInst));
+					}
+					else if (auto opInst = dynamic_cast<ConstantInt *>(operand)) {
+						printf("#%zu, ", opInst->getUnsignedValue());
+					}
+					else if (auto opInst = dynamic_cast<Parameter *>(operand)) {
+						printf("$arg%zu, ", opInst->getIndex());
+					}
+					else {
+						printf("??, ");
+					}
+				}
+				printf("\n");
 			}
 		}
 	}
