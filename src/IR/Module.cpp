@@ -1,7 +1,7 @@
 #include "IR/Module.hpp"
 #include "IR/Function.hpp"
 #include "IR/Constant.hpp"
-ConstantInt* Module::getConstantInt(size_t bitWidth, uint64_t unsignedValue) {
+ConstantInt* Module::getConstantInt(size_t bitWidth, uint64_t unsignedValue, bool autoCreate) {
 	auto end = constantIntMap_.end();
 	auto iter = constantIntMap_.find(std::make_pair(bitWidth, unsignedValue));
 	if (iter != end) {
@@ -9,7 +9,14 @@ ConstantInt* Module::getConstantInt(size_t bitWidth, uint64_t unsignedValue) {
 		FATAL_UNLESS(iter->second->getBitWidth() == bitWidth);
 		return iter->second.get();
 	}
-	return nullptr;
+	if (not autoCreate) {
+		return nullptr;
+	}
+
+	auto retv = ConstantInt::create(this, bitWidth, unsignedValue);
+	FATAL_UNLESS(constantIntMap_.contains(std::make_pair(bitWidth, unsignedValue)));
+	FATAL_UNLESS(constantIntMap_[std::make_pair(bitWidth, unsignedValue)].get() == retv);
+	return retv;
 }
 void Module::addConstantInt(std::shared_ptr<ConstantInt> ci) {
 

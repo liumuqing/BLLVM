@@ -20,7 +20,7 @@ public:
 	void addFunction(uaddr_t addr, Function * function);
 	void addFunction(uaddr_t addr, std::shared_ptr<Function> function);
 	void removeFunction(Function * function);
-	ConstantInt* getConstantInt(size_t bitWidth, uint64_t unsignedValue);
+	ConstantInt* getConstantInt(size_t bitWidth, uint64_t unsignedValue, bool autoCreate=true);
 private:
 	void addConstantInt(std::shared_ptr<ConstantInt> ci);
 	std::map<std::pair<size_t, uint64_t>, std::shared_ptr<ConstantInt>> constantIntMap_;

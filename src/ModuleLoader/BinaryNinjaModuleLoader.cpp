@@ -174,7 +174,8 @@ static void lift_function_step_2_create_dummy_inst(LiftFunctionContext& ctx) {
 	}
 }
 
-auto isMemorySSA(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
+auto static isMemorySSA(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
+	//FIXME: may have bugs...
 	size_t ssa_def_inst_id = ctx.ssa_form->GetSSAVarDefinition(ssaVar);
 	size_t memory_def_inst_id = ctx.ssa_form->GetSSAMemoryDefinition(ssaVar.version);
 	size_t inst_count = ctx.ssa_form->GetInstructionCount();
@@ -481,7 +482,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 							CallInstruction::BitWidth(bitSize)
 							);
 					//Target
-					callInst->appendOperands(getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst));
+					callInst->appendOperands(target);
 					for (auto operand: expr.GetParameterExprs()) {
 						callInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
 					}
@@ -571,6 +572,21 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 					newInst = NopInstruction::create(
 							NopInstruction::AfterInstruction(placeholderInst)
 							);
+					break;
+				}
+
+			case BNMediumLevelILOperation::MLIL_IMPORT:
+			case BNMediumLevelILOperation::MLIL_CONST:
+			case BNMediumLevelILOperation::MLIL_CONST_PTR:
+				{
+					//FIXME: cannot use expr.size * 8
+					auto imm = ctx.module.lock()->getConstantInt(64, expr.GetConstant());
+					FATAL_UNLESS(imm);
+					newInst = MovInstruction::create(
+						MovInstruction::AfterInstruction(placeholderInst),
+						MovInstruction::BitWidth(imm->getBitWidth()),
+						imm
+						);
 					break;
 				}
 			DEFINE_OPCODE_INSTRUCTION(MLIL_MEM_PHI, NopInstruction);
