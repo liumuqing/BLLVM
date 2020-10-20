@@ -19,6 +19,7 @@
 struct LiftFunctionContext {
 	BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> ssa_form = nullptr;
 	BasicBlock * entryBasicBlock = nullptr;
+	std::weak_ptr<Module> module;
 	std::shared_ptr<Function> function = nullptr;
 
 	std::map<BinaryNinja::ExprId, Instruction *> exprId2Instruction;
@@ -165,7 +166,7 @@ static void lift_function_step_2_create_dummy_inst(LiftFunctionContext& ctx) {
 			ctx.bnBB2BB[ssa_bbl] = BasicBlock::create(ctx.function.get());
 		}
 		auto bbl = ctx.bnBB2BB[ssa_bbl];
-		auto inst = NopInstruction::create(NopInstruction::EndOfBasicBlock(bbl));
+		auto inst = UndefiendInstruction::create(UndefiendInstruction::EndOfBasicBlock(bbl));
 		ctx.exprId2Instruction[expr_id] = inst;
 		if (ctx.ssa_form->GetIndexForInstruction(inst_id) == expr_id) {
 			ctx.instId2Instruction[inst_id] = inst;
@@ -258,6 +259,7 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 	FATAL_UNLESS(ssa_form->GetInstructionCount() > 0);
 
 	LiftFunctionContext ctx;
+	ctx.module = module->weak_from_this<Module>();
 	ctx.ssa_form = ssa_form;
 	ctx.function = Function::create(ssa_form->GetFunction()->GetStart());
 
@@ -341,6 +343,16 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			}
 		};
 		switch (expr.operation) {
+			#define DEFINE_OPCODE_INSTRUCTION(bn_opcode, InstructionType) \
+			case BNMediumLevelILOperation::bn_opcode: { \
+					newInst = InstructionType::create( \
+						InstructionType::AfterInstruction(placeholderInst),\
+						InstructionType::BitWidth(expr.size * 8)\
+						);\
+					break;\
+				}
+			DEFINE_OPCODE_INSTRUCTION(MLIL_NOP, NopInstruction);
+
 			#define DEFINE_BINARY_INSTRUCTION(bn_opcode, InstructionType) \
 			case BNMediumLevelILOperation::bn_opcode: { \
 					newInst = InstructionType::create( \
@@ -377,12 +389,39 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_UNARY_INSTRUCTION(MLIL_NOT, NotInstruction);
 			DEFINE_UNARY_INSTRUCTION(MLIL_NEG, NegInstruction);
 			#undef DEFINE_UNARY_INSTRUCTION
-
-			case BNMediumLevelILOperation::MLIL_NOP:
-				newInst = NopInstruction::create(
-						NopInstruction::AfterInstruction(placeholderInst)
+			
+			case BNMediumLevelILOperation::MLIL_LOAD_SSA:
+			{
+				newInst = LoadInstruction::create(
+						LoadInstruction::AfterInstruction(placeholderInst),
+						LoadInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
 						);
 				break;
+			};
+			case BNMediumLevelILOperation::MLIL_LOAD_STRUCT_SSA:
+			{
+				auto imm = placeholder
+				newInst = LoadInstruction::create(
+						LoadInstruction::AfterInstruction(placeholderInst),
+						LoadInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
+						);
+				break;
+			};
+			case BNMediumLevelILOperation::MLIL_STORE_SSA:
+			{
+			case BNMediumLevelILOperation::MLIL_STORE_SSA:
+			{
+				newInst = StoreInstruction::create(
+						StoreInstruction::AfterInstruction(placeholderInst),
+						StoreInstruction::BitWidth(expr.size * 8),
+						getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst),
+						getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
+						);
+				break;
+			};
+			DEFINE_OPCODE_INSTRUCTION(MLIL_CALL_OUTPUT_SSA, NopInstruction);
 			case BNMediumLevelILOperation::MLIL_CALL_SSA:
 				{
 					auto target = getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst);
@@ -421,12 +460,13 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 					}
 					break;
 				}
-			case BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA: {
-				newInst = NopInstruction::create(
-						NopInstruction::AfterInstruction(placeholderInst)
-						);
-			}
-
+			case BNMediumLevelILOperation::MLIL_CALL_PARAM:
+			case BNMediumLevelILOperation::MLIL_CALL_OUTPUT:
+				FATAL("non-ssa binary ninja opcode?");
+				break;
+			default:
+				FATAL("unhandled binary ninja opcode?");
+				break;
 		}
 
 		if (newInst) {
