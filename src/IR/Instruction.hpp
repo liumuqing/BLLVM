@@ -264,3 +264,4 @@ class LoadInstruction: virtual public InstructionKind<LoadInstruction, LOAD> {};
 class StoreInstruction: virtual public InstructionKind<StoreInstruction, STORE> {};
 
 class PhiInstruction: virtual public InstructionKind<PhiInstruction, PHI> {};
+class UnreachableInstruction: virtual public InstructionKind<UnreachableInstruction, UNREACHABLE> {};

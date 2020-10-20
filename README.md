@@ -14,3 +14,5 @@ make test && make
 popd
 ```
 
+#### TODO
+* CMP INST

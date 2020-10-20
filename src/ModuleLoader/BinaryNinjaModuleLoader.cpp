@@ -184,6 +184,7 @@ auto static isMemorySSA(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable
 		std::set<BNMediumLevelILOperation> black_ops = {
 			BNMediumLevelILOperation::MLIL_CALL_SSA,
 			BNMediumLevelILOperation::MLIL_SYSCALL_SSA,
+			//FIXME
 		};
 		if (black_ops.contains(ssa_inst.operation)) {
 			return false;
@@ -591,8 +592,35 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				}
 			DEFINE_OPCODE_INSTRUCTION(MLIL_MEM_PHI, NopInstruction);
 
+			DEFINE_OPCODE_INSTRUCTION(MLIL_BP, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_CEIL, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FLOOR, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_E, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_GE, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_GT, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_LE, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_LT, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_NE, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_O, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_UO, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FABS, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FADD, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FDIV, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FLOAT_CONST, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FLOAT_CONV, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FMUL, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FNEG, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FSQRT, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FSUB, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_FTRUNC, UndefiendInstruction);
+
+			DEFINE_OPCODE_INSTRUCTION(MLIL_IF, UnreachableInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_RET, UnreachableInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP, UnreachableInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UnreachableInstruction);
+
 			default:
-				//FATAL("unhandled binary ninja opcode?");
+				FATAL("unhandled binary ninja opcode? %d", expr.operation);
 				break;
 		}
 
