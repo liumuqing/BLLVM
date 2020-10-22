@@ -3,6 +3,8 @@
 #include "IR/User.hpp"
 
 class BasicBlock;
+class ConstantInt;
+
 enum Opcode {
 	#define HANDLE_INST(opcode) opcode,
 	#include "IR/Instruction.def"
@@ -265,3 +267,30 @@ class StoreInstruction: virtual public InstructionKind<StoreInstruction, STORE> 
 
 class PhiInstruction: virtual public InstructionKind<PhiInstruction, PHI> {};
 class UnreachableInstruction: virtual public InstructionKind<UnreachableInstruction, UNREACHABLE> {};
+
+class CompareInstruction: virtual public BinaryInstruction {
+public:
+	/*
+	 * return the operand, if it's the only immediate operand.
+	 * otherwise return nullptr
+	 */
+	ConstantInt * getUniqueImmediateOperand() const;
+	/*
+	 * return the operand, if it's the only non-immediate operand.
+	 * otherwise return nullptr
+	 */
+	Value * getUniqueNonImmediateOperand() const;
+};
+class SignedLessThanInstruction:
+	virtual public InstructionKind<SignedExtendInstruction, CMP_SLT>,
+	virtual public BinaryInstruction {
+};
+class UnsignedLessThanInstruction:
+	virtual public InstructionKind<UnsignedExtendInstruction, CMP_ULT>,
+	virtual public BinaryInstruction {
+};
+class EqualWithInstruction:
+	virtual public InstructionKind<EqualWithInstruction, CMP_EQ>,
+	virtual public BinaryInstruction {
+};
+

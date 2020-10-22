@@ -591,8 +591,9 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 					break;
 				}
 			DEFINE_OPCODE_INSTRUCTION(MLIL_MEM_PHI, NopInstruction);
+			
 
-			DEFINE_OPCODE_INSTRUCTION(MLIL_BP, UndefiendInstruction);
+			//floating instruction are translated to undefined instruction
 			DEFINE_OPCODE_INSTRUCTION(MLIL_CEIL, UndefiendInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_FLOOR, UndefiendInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_E, UndefiendInstruction);
@@ -614,14 +615,67 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_OPCODE_INSTRUCTION(MLIL_FSUB, UndefiendInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_FTRUNC, UndefiendInstruction);
 
+
+			#define DEFINE_COMPARE_INSTRUCTION(bn_opcode, InstructionType, changeLeftRight, addNot) \
+			case BNMediumLevelILOperation::bn_opcode: { \
+					auto left = getTranslatedReadOperand(expr.GetLeftExpr(), placeholderInst); \
+					auto right = getTranslatedReadOperand(expr.GetRightExpr(), placeholderInst); \
+					if (changeLeftRight) { \
+						std::swap(left, right); \
+					}\
+					Instruction * cmpInst = InstructionType::create( \
+						InstructionType::AfterInstruction(placeholderInst),\
+						InstructionType::BitWidth(1),\
+						left, \
+						right\
+						);\
+					if (addNot) { \
+						cmpInst = NotInstruction::create( \
+							NotInstruction::AfterInstruction(cmpInst), \
+							NotInstruction::BitWidth(1), \
+							cmpInst \
+						); \
+					} \
+					newInst = UnsignedExtendInstruction::create( \
+						InstructionType::AfterInstruction(cmpInst), \
+						InstructionType::BitWidth(expr.size * 8), \
+						cmpInst \
+					); \
+					break;\
+				}
+
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_E, EqualWithInstruction, false, false);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_NE, EqualWithInstruction, false, true);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_SLT, SignedLessThanInstruction, false, false);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_SGT, SignedLessThanInstruction, true, false);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_SLE, SignedLessThanInstruction, true, true);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_SGE, SignedLessThanInstruction, false, true);
+
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_ULT, UnsignedLessThanInstruction, false, false);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_UGT, UnsignedLessThanInstruction, true, false);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_ULE, UnsignedLessThanInstruction, true, true);
+			DEFINE_COMPARE_INSTRUCTION(MLIL_CMP_UGE, UnsignedLessThanInstruction, false, true);
+
+			#undef DEFINE_COMPARE_INSTRUCTION
+			
+			DEFINE_OPCODE_INSTRUCTION(MLIL_BP, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_TRAP, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_UNDEF, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_UNIMPL, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_UNIMPL_MEM, UndefiendInstruction);
+
+			//FIXME: the follow basic block terminating instruction is not defined yet..
+			DEFINE_OPCODE_INSTRUCTION(MLIL_GOTO, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_IF, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_RET, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UnreachableInstruction);
 
+
 			default:
 				FATAL("unhandled binary ninja opcode? %d", expr.operation);
 				break;
+			#undef DEFINE_OPCODE_INSTRUCTION
 		}
 
 		if (newInst) {

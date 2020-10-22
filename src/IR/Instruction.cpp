@@ -1,5 +1,6 @@
 #include "IR/Instruction.hpp"
 #include "IR/BasicBlock.hpp"
+#include "IR/Constant.hpp"
 
 const char * Instruction::getOpstr() const {
 	FATAL_UNLESS(getOpcode() < sizeof(OpStr)/sizeof(OpStr[0]));
@@ -12,6 +13,36 @@ const char * OpStr[OPCODE_COUNT] {
 };
 
 extern template class InstructionKind<UndefiendInstruction, UNDEF>;
+/*
+ * return the operand, if it's the only immediate operand.
+ * otherwise return nullptr
+ */
+ConstantInt * CompareInstruction::getUniqueImmediateOperand() const {
+	auto left = dynamic_cast<ConstantInt *>(getLeft());
+	auto right = dynamic_cast<ConstantInt *>(getRight());
+	if (left and not right) {
+		return left;
+	}
+	if (right and not left) {
+		return right;
+	}
+	return nullptr;
+}
+/*
+ * return the operand, if it's the only non-immediate operand.
+ * otherwise return nullptr
+ */
+Value * CompareInstruction::getUniqueNonImmediateOperand() const {
+	auto left = dynamic_cast<ConstantInt *>(getLeft());
+	auto right = dynamic_cast<ConstantInt *>(getRight());
+	if (left and not right) {
+		return getRight();
+	}
+	if (right and not left) {
+		return getLeft();
+	}
+	return nullptr;
+}
 
 void Instruction::pushToBBL(BasicBlock * bbl) {
 	FATAL_UNLESS(not this->getParent());
