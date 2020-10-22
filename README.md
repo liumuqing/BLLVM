@@ -15,4 +15,4 @@ popd
 ```
 
 #### TODO
-* CMP INST
+* BRANCH INSTRUCTION

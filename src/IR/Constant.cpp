@@ -9,7 +9,6 @@ ConstantInt * ConstantInt::create(Module * parent, size_t bitWidth, uint64_t val
 	auto retv = std::shared_ptr<ConstantInt>(new ConstantInt());
 	retv->setBitWidth(bitWidth);
 	retv->value_ = value;
-	INFO("%d\n", bitWidth);
 	FATAL_UNLESS(retv->getUnsignedValue() == value);
 	parent->addConstantInt(retv);
 	return retv.get();

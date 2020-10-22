@@ -175,7 +175,8 @@ static void lift_function_step_2_create_dummy_inst(LiftFunctionContext& ctx) {
 }
 
 auto static isMemorySSA(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable& ssaVar) {
-	//FIXME: may have bugs...
+	//FIXME: this function is wrong
+	// but let's just use it, until I'm ready to fix it
 	size_t ssa_def_inst_id = ctx.ssa_form->GetSSAVarDefinition(ssaVar);
 	size_t memory_def_inst_id = ctx.ssa_form->GetSSAMemoryDefinition(ssaVar.version);
 	size_t inst_count = ctx.ssa_form->GetInstructionCount();
@@ -183,7 +184,10 @@ auto static isMemorySSA(LiftFunctionContext& ctx, const BinaryNinja::SSAVariable
 		auto ssa_inst = ctx.ssa_form->GetInstruction(ssa_def_inst_id);
 		std::set<BNMediumLevelILOperation> black_ops = {
 			BNMediumLevelILOperation::MLIL_CALL_SSA,
+			BNMediumLevelILOperation::MLIL_CALL_UNTYPED_SSA,
 			BNMediumLevelILOperation::MLIL_SYSCALL_SSA,
+			BNMediumLevelILOperation::MLIL_TAILCALL_SSA,
+			BNMediumLevelILOperation::MLIL_TAILCALL_UNTYPED_SSA,
 			//FIXME
 		};
 		if (black_ops.contains(ssa_inst.operation)) {
