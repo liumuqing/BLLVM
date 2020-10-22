@@ -391,6 +391,9 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_BINARY_INSTRUCTION(MLIL_AND, AndInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_OR, OrInstruction);
 			DEFINE_BINARY_INSTRUCTION(MLIL_XOR, XorInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_LSL, LogicShiftLeftInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_LSR, LogicShiftRightInstruction);
+			DEFINE_BINARY_INSTRUCTION(MLIL_ASR, ArithmeticShiftRightInstruction);
 			#undef DEFINE_BINARY_INSTRUCTION
 
 			#define DEFINE_UNARY_INSTRUCTION(bn_opcode, InstructionType) \
@@ -407,7 +410,40 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_UNARY_INSTRUCTION(MLIL_NOT, NotInstruction);
 			DEFINE_UNARY_INSTRUCTION(MLIL_NEG, NegInstruction);
 			#undef DEFINE_UNARY_INSTRUCTION
+
+			case BNMediumLevelILOperation::MLIL_SET_VAR_SSA:
+			case BNMediumLevelILOperation::MLIL_SET_VAR_ALIASED:  // FIXME: MLIL_SET_VAR_ALIASED should not be translated like this
+			{
+				newInst = NopInstruction::create(
+						NopInstruction::AfterInstruction(placeholderInst)
+						);
+				auto movInst  = MovInstruction::create(
+					MovInstruction::AfterInstruction(placeholderInst),
+					MovInstruction::BitWidth(expr.GetSourceExpr().size * 8),
+					getTranslatedReadOperand(expr.GetSourceExpr(), placeholderInst)
+				);
+				writeSSAvariable(expr.GetDestSSAVariable(), movInst);
+				break;
+			};
+			case BNMediumLevelILOperation::MLIL_VAR_SSA:
+			//case BNMediumLevelILOperation::MLIL_VAR_ALIASED:  // FIXME: MLIL_VAR_ALIASED should not be translated like this
+			{
+				newInst  = MovInstruction::create(
+					MovInstruction::AfterInstruction(placeholderInst),
+					MovInstruction::BitWidth(getBitWidthOfSSAVariable(ctx, expr.GetSourceSSAVariable())),
+					getTranslatedReadOperand(expr.GetSourceSSAVariable(), placeholderInst)
+				);
+				break;
+			};
+
+			//FIXME
+			DEFINE_OPCODE_INSTRUCTION(MLIL_VAR_SSA_FIELD, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_VAR_ALIASED_FIELD, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_SET_VAR_SSA_FIELD, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_SET_VAR_ALIASED_FIELD, UndefiendInstruction);
 			
+
+
 			case BNMediumLevelILOperation::MLIL_LOAD_SSA:
 			{
 				newInst = LoadInstruction::create(
@@ -461,8 +497,13 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 				break;
 			};
 			DEFINE_OPCODE_INSTRUCTION(MLIL_CALL_OUTPUT_SSA, NopInstruction);
+
+			case BNMediumLevelILOperation::MLIL_CALL_UNTYPED_SSA:
 			case BNMediumLevelILOperation::MLIL_CALL_SSA:
+			case BNMediumLevelILOperation::MLIL_TAILCALL_SSA:
+			case BNMediumLevelILOperation::MLIL_TAILCALL_UNTYPED_SSA:
 				{
+					bool returnTheFunction = (expr.operation == MLIL_TAILCALL_UNTYPED_SSA || expr.operation == MLIL_TAILCALL_SSA);
 					auto target = getTranslatedReadOperand(expr.GetDestExpr(), placeholderInst);
 					auto outputSSAVars = expr.GetOutputSSAVariables();
 					auto bitSize = 0;
@@ -482,12 +523,35 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 							CallInstruction::AfterInstruction(placeholderInst),
 							CallInstruction::BitWidth(bitSize)
 							);
+
 					//Target
 					callInst->appendOperands(target);
 					for (auto operand: expr.GetParameterExprs()) {
 						callInst->appendOperands(getTranslatedReadOperand(operand, placeholderInst));
 					}
 
+					// we should create the return instruction (if exist) first..
+					if (returnTheFunction) {
+						switch (outputSSAVars.size()) {
+							case 0:
+								newInst = ReturnInstruction::create(
+									ReturnInstruction::AfterInstruction(callInst)
+										);
+							case 1:
+							default:
+								newInst = ReturnInstruction::create(
+									ReturnInstruction::AfterInstruction(callInst),
+									callInst
+										);
+								break;
+						}
+					} else {
+						newInst = NopInstruction::create(
+							NopInstruction::AfterInstruction(callInst)
+							);
+					}
+
+					// set return value of callinst ssa variable after callinst, before return inst
 					switch (outputSSAVars.size()) {
 						case 0:
 							break;
@@ -496,10 +560,21 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 							writeSSAvariable(outputSSAVars[0], callInst);
 							break;
 					}
+					break;
+				}
 
-					newInst = NopInstruction::create(
-							NopInstruction::AfterInstruction(placeholderInst)
+			DEFINE_OPCODE_INSTRUCTION(MLIL_NORET, UnreachableInstruction);
+			case BNMediumLevelILOperation::MLIL_RET:
+				{
+					auto list = expr.GetSourceExprs();
+					newInst = ReturnInstruction::create(
+							ReturnInstruction::AfterInstruction(placeholderInst)
 							);
+					if (list.size()) {
+						newInst->appendOperands(
+								getTranslatedReadOperand(list[0], placeholderInst)
+								);
+					}
 					break;
 				}
 			case BNMediumLevelILOperation::MLIL_CALL_PARAM:
@@ -593,6 +668,11 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_OPCODE_INSTRUCTION(MLIL_MEM_PHI, NopInstruction);
 			
 
+
+			DEFINE_OPCODE_INSTRUCTION(MLIL_ROL, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_ROR, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_RLC, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_RRC, UndefiendInstruction);
 			//floating instruction are translated to undefined instruction
 			DEFINE_OPCODE_INSTRUCTION(MLIL_CEIL, UndefiendInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_FLOOR, UndefiendInstruction);
@@ -667,7 +747,6 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			//FIXME: the follow basic block terminating instruction is not defined yet..
 			DEFINE_OPCODE_INSTRUCTION(MLIL_GOTO, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_IF, UnreachableInstruction);
-			DEFINE_OPCODE_INSTRUCTION(MLIL_RET, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP, UnreachableInstruction);
 			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UnreachableInstruction);
 

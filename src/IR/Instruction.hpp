@@ -294,3 +294,16 @@ class EqualWithInstruction:
 	virtual public BinaryInstruction {
 };
 
+class ReturnInstruction:
+	virtual public InstructionKind<ReturnInstruction, RETURN> {
+};
+
+class LogicShiftLeftInstruction:
+	virtual public InstructionKind<LogicShiftLeftInstruction, LSL> {
+};
+class LogicShiftRightInstruction:
+	virtual public InstructionKind<LogicShiftRightInstruction, LSR> {
+};
+class ArithmeticShiftRightInstruction:
+	virtual public InstructionKind<ArithmeticShiftRightInstruction, ASR> {
+};
