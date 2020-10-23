@@ -83,6 +83,9 @@ int main(int argc, const char *argv[]) {
 					else if (auto opInst = dynamic_cast<Parameter *>(operand)) {
 						printf("$arg%zu, ", opInst->getIndex());
 					}
+					else if (auto opInst = dynamic_cast<BasicBlock *>(operand)) {
+						printf("bbl_%p, ", opInst);
+					}
 					else {
 						printf("??, ");
 					}

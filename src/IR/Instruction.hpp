@@ -307,3 +307,27 @@ class LogicShiftRightInstruction:
 class ArithmeticShiftRightInstruction:
 	virtual public InstructionKind<ArithmeticShiftRightInstruction, ASR> {
 };
+class BranchInstruction: virtual public Instruction {
+public:
+	virtual bool isCondtional() const = 0;
+};
+class ConditionalBranchInstruction: virtual public BranchInstruction,
+	virtual public InstructionKind<ConditionalBranchInstruction, CBRANCH> {
+public:
+	virtual bool isCondtional() const override final { return true; }
+	Value * getCondition() const {
+		return getOperand(0);
+	}
+	Value * getTrueTarget() const {
+		return getOperand(1);
+	}
+	Value * getFalseTarget() const {
+		return getOperand(2);
+	}
+};
+class UnconditionalBranchInstruction: virtual public BranchInstruction,
+	virtual public InstructionKind<UnconditionalBranchInstruction, UCBRANCH> {
+public:
+	virtual bool isCondtional() const override final { return false; }
+};
+

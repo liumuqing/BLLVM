@@ -749,10 +749,33 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
 			DEFINE_OPCODE_INSTRUCTION(MLIL_UNIMPL_MEM, UndefiendInstruction);
 
 			//FIXME: the follow basic block terminating instruction is not defined yet..
-			DEFINE_OPCODE_INSTRUCTION(MLIL_GOTO, UnreachableInstruction);
-			DEFINE_OPCODE_INSTRUCTION(MLIL_IF, UnreachableInstruction);
-			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP, UnreachableInstruction);
-			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UnreachableInstruction);
+			//DEFINE_OPCODE_INSTRUCTION(MLIL_GOTO, UnreachableInstruction);
+			case BNMediumLevelILOperation::MLIL_GOTO:
+				{
+					FATAL_UNLESS(ctx.instId2Instruction.contains(expr.GetTarget()));
+					auto target = ctx.instId2Instruction[expr.GetTarget()]->getParent();
+					newInst = UnconditionalBranchInstruction::create(
+							UnconditionalBranchInstruction::AfterInstruction(placeholderInst),
+							target
+							);
+					break;
+				}
+			case BNMediumLevelILOperation::MLIL_IF:
+				{
+					FATAL_UNLESS(ctx.instId2Instruction.contains(expr.GetTrueTarget()));
+					auto trueTarget = ctx.instId2Instruction[expr.GetTrueTarget()]->getParent();
+					FATAL_UNLESS(ctx.instId2Instruction.contains(expr.GetFalseTarget()));
+					auto falseTarget = ctx.instId2Instruction[expr.GetFalseTarget()]->getParent();
+					newInst = ConditionalBranchInstruction::create(
+							ConditionalBranchInstruction::AfterInstruction(placeholderInst),
+							getTranslatedReadOperand(expr.GetConditionExpr(), placeholderInst),
+							trueTarget,
+							falseTarget
+							);
+					break;
+				}
+			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP, UndefiendInstruction);
+			DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UndefiendInstruction);
 
 
 			default:
