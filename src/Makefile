@@ -17,7 +17,7 @@ $(shell mkdir -p $(OBJDIR) >/dev/null)
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 H_INCLUDE = -I./ -I../binaryninja-api/ -I../3rd_party/argparse/include -I../3rd_party/plog/include
-LIB_INCLUDE = -L../binaryninja-api/bin/
+LIB_INCLUDE = -L../binaryninja-api/build/out/
 LIBS = -lbinaryninjaapi -ldl -pthread
 TARGET=../bin/main
 

@@ -300,13 +300,16 @@ class ReturnInstruction:
 };
 
 class LogicShiftLeftInstruction:
-    virtual public InstructionKind<LogicShiftLeftInstruction, LSL> {
+    virtual public InstructionKind<LogicShiftLeftInstruction, LSL>,
+    virtual public BinaryInstruction {
 };
 class LogicShiftRightInstruction:
-    virtual public InstructionKind<LogicShiftRightInstruction, LSR> {
+    virtual public InstructionKind<LogicShiftRightInstruction, LSR>,
+    virtual public BinaryInstruction {
 };
 class ArithmeticShiftRightInstruction:
-    virtual public InstructionKind<ArithmeticShiftRightInstruction, ASR> {
+    virtual public InstructionKind<ArithmeticShiftRightInstruction, ASR>,
+    virtual public BinaryInstruction {
 };
 class BranchInstruction: virtual public Instruction {
 public:
@@ -330,5 +333,10 @@ class UnconditionalBranchInstruction: virtual public BranchInstruction,
     virtual public InstructionKind<UnconditionalBranchInstruction, UCBRANCH> {
 public:
     virtual bool isCondtional() const override final { return false; }
+};
+
+class TruncInstruction:
+	virtual public UnaryInstruction,
+    virtual public InstructionKind<TruncInstruction, TRUNC> {
 };
 
