@@ -5,7 +5,7 @@
 #include "IR/Use.hpp"
 #include "common.hpp"
 #include "Utils/Object.hpp"
-class Value : virtual private Object{
+class Value : virtual public Object{
 public:
     template <typename T = Value>
     std::shared_ptr<T> shared_from_this(){
