@@ -597,10 +597,6 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
                     }
                     break;
                 }
-            case BNMediumLevelILOperation::MLIL_CALL_PARAM:
-            case BNMediumLevelILOperation::MLIL_CALL_OUTPUT:
-                FATAL("non-ssa binary ninja opcode?");
-                break;
             case BNMediumLevelILOperation::MLIL_ADC:
                 {
                     auto addInst = AddInstruction::create(
@@ -808,6 +804,31 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
             DEFINE_OPCODE_INSTRUCTION(MLIL_JUMP_TO, UndefiendInstruction);
 
 
+			case BNMediumLevelILOperation::MLIL_SET_VAR:
+			case BNMediumLevelILOperation::MLIL_SET_VAR_FIELD:
+			case BNMediumLevelILOperation::MLIL_SET_VAR_SPLIT:
+			case BNMediumLevelILOperation::MLIL_LOAD:
+			case BNMediumLevelILOperation::MLIL_LOAD_STRUCT:
+			case BNMediumLevelILOperation::MLIL_STORE:
+			case BNMediumLevelILOperation::MLIL_STORE_STRUCT:
+			case BNMediumLevelILOperation::MLIL_VAR:
+			case BNMediumLevelILOperation::MLIL_VAR_FIELD:
+			case BNMediumLevelILOperation::MLIL_VAR_SPLIT:
+
+			case BNMediumLevelILOperation::MLIL_RET_HINT:
+			case BNMediumLevelILOperation::MLIL_CALL:
+			case BNMediumLevelILOperation::MLIL_CALL_UNTYPED:
+			case BNMediumLevelILOperation::MLIL_CALL_OUTPUT:
+			case BNMediumLevelILOperation::MLIL_CALL_PARAM:
+
+			case BNMediumLevelILOperation::MLIL_SYSCALL:
+			case BNMediumLevelILOperation::MLIL_SYSCALL_UNTYPED:
+			case BNMediumLevelILOperation::MLIL_TAILCALL:
+			case BNMediumLevelILOperation::MLIL_TAILCALL_UNTYPED:
+			case BNMediumLevelILOperation::MLIL_INTRINSIC:
+			case BNMediumLevelILOperation::MLIL_FREE_VAR_SLOT:
+				FATAL("binary ninja operation %d should not occurs in ssa form mlil", expr.operation);
+				break;
             default:
                 FATAL("unhandled binary ninja opcode? %d", expr.operation);
                 break;
