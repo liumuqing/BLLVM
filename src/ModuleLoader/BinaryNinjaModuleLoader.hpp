@@ -4,6 +4,7 @@
 
 #include "binaryninjaapi.h"
 #include "ModuleLoader/ModuleLoader.hpp"
+
 class BinaryNinjaModuleLoader: ModuleLoader {
 
 public:
@@ -14,6 +15,7 @@ public:
     virtual bool isBigEndian() override;
     virtual std::optional<std::string> getSymbolNameAt(uaddr_t addr) override;
     virtual ~BinaryNinjaModuleLoader() override;
+
 private:
     static std::atomic<int> instance_count;
 
@@ -22,6 +24,7 @@ private:
     BinaryNinja::Ref<BinaryNinja::BinaryView> binary_data_view;
     BinaryNinja::Ref<BinaryNinja::BinaryView> binary_view;
     std::unique_ptr<BinaryNinja::BinaryReader> binary_reader;
+
 protected:
     bool isOpen() {
         return binary_view;

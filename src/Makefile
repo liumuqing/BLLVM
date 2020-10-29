@@ -22,7 +22,7 @@ LIBS = -lbinaryninjaapi -ldl -pthread
 TARGET=../bin/main
 
 
-CPPFLAGS = $(H_INCLUDE) -Wall -g -std=c++20 #-stdlib=libc++
+CPPFLAGS = $(H_INCLUDE) -Wall -g -std=c++20 -stdlib=libc++
 CPPFLAGS += ${TEST_CPPFLAGS}
 
 #Link binaryninja, set rpath

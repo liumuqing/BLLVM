@@ -1,8 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <functional>
+#include <compare>
 
-#include <common.hpp>
+#include "common.hpp"
 
 class Module;
 class Function;
@@ -10,19 +12,30 @@ class BasicBlock;
 
 class PassManager;
 
-template <typename Self> class PassInfoInfoMixin {
+class PassID {
 public:
-    // used as &Pass::ID, to represet a class
-    static uintptr_t getClassId() {
-        return static_cast<uintptr_t>(&ID);
-    }
+	explicit PassID(void * value) {
+		value_ = reinterpret_cast<std::uintptr_t>(value);
+	}
+	auto operator<=> (const PassID& other) {
+		return this->value_ <=> other.value_;
+	}
 private:
-    static struct {} ID;
+	std::uintptr_t value_;
+};
+
+class PassInfoMixin {
+public:
+	static PassID getClassId() {
+		return PassID(&id_);
+	}
+private:
+    static struct {} id_;
 };
 
 class Pass {
 	Pass(PassManager * pm) {
-		pm_ = pm->;
+		pm_ = pm;
 	};
 	bool run(Module * module, PassManager * pm);
 	bool run(Function * function, PassManager * pm);
