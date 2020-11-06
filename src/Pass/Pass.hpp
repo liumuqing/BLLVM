@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <memory>
 #include <functional>
-#include <compare>
 
 #include "common.hpp"
 
@@ -17,8 +16,14 @@ public:
 	explicit PassID(void * value) {
 		value_ = reinterpret_cast<std::uintptr_t>(value);
 	}
-	auto operator<=> (const PassID& other) {
-		return this->value_ <=> other.value_;
+	auto operator== (const PassID& other) {
+		return this->value_ == other.value_;
+	}
+	auto operator< (const PassID& other) {
+		return this->value_ < other.value_;
+	}
+	auto operator> (const PassID& other) {
+		return this->value_ > other.value_;
 	}
 private:
 	std::uintptr_t value_;
@@ -34,12 +39,8 @@ private:
 };
 
 class Pass {
-	Pass(PassManager * pm) {
-		pm_ = pm;
-	};
-	bool run(Module * module, PassManager * pm);
-	bool run(Function * function, PassManager * pm);
-	bool run(BasicBlock * basicBlock, PassManager * pm);
+public:
+	Pass(PassManager * pm);
 	virtual ~Pass() = default;
 protected:
 	std::weak_ptr<PassManager> pm_;
@@ -50,13 +51,20 @@ protected:
 		return retv;
 	}
 };
-class Analysis {
-	Pass() {};
-	bool run(Module * module, PassManager * pm);
-	bool run(Function * function, PassManager * pm);
-	bool run(BasicBlock * basicBlock, PassManager * pm);
-	virtual ~Pass() = default;
-}
 
-class ModulePass {
-}
+class Analysis: virtual public Pass {
+	virtual ~Analysis() = default;
+};
+
+class Transformation: virtual public Pass {
+	virtual ~Transformation() = default;
+};
+
+
+class ModulePass: virtual public Pass {
+	virtual bool run(Module * module, PassManager pm) = 0;
+};
+
+class FunctionPass: virtual public Pass {
+	virtual bool run(Function * function, PassManager pm) = 0;
+};

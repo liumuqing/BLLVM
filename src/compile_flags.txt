@@ -3,4 +3,3 @@
 -I../3rd_party/argparse/include
 -I../3rd_party/plog/include
 -I./
--stdlib=libc++
