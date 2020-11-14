@@ -31,8 +31,8 @@ LINKER = clang++-11
 
 COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 COMPILE.cc = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
-POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
-POSTCOMPILE = touch $@
+#POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
+POSTCOMPILE = @touch $@
 
 .PHONY : clean test
 
@@ -41,25 +41,25 @@ $(TARGET): $(OBJS)
 
 $(OBJDIR)/%.o : %.c
 $(OBJDIR)/%.o : %.c $(DEPDIR)/%.d
-	mkdir -p $(shell dirname $^ $@)
+	@mkdir -p $(shell dirname $^ $@)
 	$(COMPILE.c) $(OUTPUT_OPTION) $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o : %.cc
 $(OBJDIR)/%.o : %.cc $(DEPDIR)/%.d
-	mkdir -p $(shell dirname $^ $@)
+	@mkdir -p $(shell dirname $^ $@)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o : %.cxx
 $(OBJDIR)/%.o : %.cxx $(DEPDIR)/%.d
-	mkdir -p $(shell dirname $^ $@)
+	@mkdir -p $(shell dirname $^ $@)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o : %.cpp
 $(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d
-	mkdir -p $(shell dirname $^ $@)
+	@mkdir -p $(shell dirname $^ $@)
 	$(COMPILE.cc) $(OUTPUT_OPTION) $< -o $@
 	$(POSTCOMPILE)
 

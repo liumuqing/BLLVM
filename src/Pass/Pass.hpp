@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "common.hpp"
+#include "Utils/Object.hpp"
 
 class Module;
 class Function;
@@ -29,19 +30,12 @@ private:
 	std::uintptr_t value_;
 };
 
-class PassInfoMixin {
-public:
-	static PassID getClassId() {
-		return PassID(&id_);
-	}
-private:
-    static struct {} id_;
-};
-
-class Pass {
+class Pass: virtual public Object {
 public:
 	Pass(PassManager * pm);
 	virtual ~Pass() = default;
+	virtual PassID getPassId() const = 0;
+	virtual bool run() = 0;
 protected:
 	std::weak_ptr<PassManager> pm_;
 	PassManager * getPassManager() const {
@@ -52,19 +46,39 @@ protected:
 	}
 };
 
+class PassInfoMixin: virtual public Pass {
+public:
+	virtual PassID getPassId() const override final {
+		return PassID(&ID);
+	}
+    static struct {} ID;
+};
+
 class Analysis: virtual public Pass {
+public:
 	virtual ~Analysis() = default;
 };
 
 class Transformation: virtual public Pass {
+public:
 	virtual ~Transformation() = default;
 };
 
-
-class ModulePass: virtual public Pass {
-	virtual bool run(Module * module, PassManager pm) = 0;
+template <typename IRUintT> class IRUnitPass: virtual Pass {
+public:
+	IRUnitPass(IRUintT * target, PassManager * passManager): Pass(passManager) {
+		FATAL_UNLESS(target);
+		target_ = target->template weak_from_shared<IRUintT>();
+	}
+	IRUintT * getTarget() const {
+		FATAL_UNLESS(not target_.expired());
+		auto retv = target_.lock().get();
+		FATAL_UNLESS(retv);
+	}
+	virtual ~IRUnitPass() = default;
+private:
+	std::weak_ptr<IRUintT> target_;
 };
 
-class FunctionPass: virtual public Pass {
-	virtual bool run(Function * function, PassManager pm) = 0;
-};
+typedef IRUnitPass<Function> FunctionPass;
+typedef IRUnitPass<Module> ModulePass;

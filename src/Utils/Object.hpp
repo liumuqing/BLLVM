@@ -1,4 +1,7 @@
+#pragma once
 #include <memory>
+
+#include "common.hpp"
 class Object: virtual public std::enable_shared_from_this<Object> {
 public:
     template <typename T = Object>
