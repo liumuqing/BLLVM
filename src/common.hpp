@@ -30,4 +30,4 @@ void WARN(const char * format, Args... args) {
     PLOGW.printf(format, args...);
 }
 
-#define FATAL_UNLESS(cond) do {if (!(cond)) {FATAL("[ERROR] %s:%d %s is not satisfied\n", __FILE__, __LINE__, #cond);}} while (0)
+#define FATAL_UNLESS(cond) do {if (!(cond)) {FATAL("[ERROR] %s:%d `%s` is not satisfied\n", __FILE__, __LINE__, #cond);}} while (0)
