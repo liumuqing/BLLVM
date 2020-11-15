@@ -2,6 +2,6 @@
 
 #include "Pass/PassManager.hpp"
 
-Pass::Pass(PassManager * pm) {
+void Pass::initialize(PassManager * pm) {
 	this->pm_ = pm->weak_from_this<PassManager>();
 }

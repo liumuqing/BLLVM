@@ -26,8 +26,12 @@
 #include "IR/Instruction.hpp"
 #include "IR/Constant.hpp"
 
+#include "Pass/PassManager.hpp"
+
 #include <unordered_map>
 
+
+#include "Pass/PrintModulePass.hpp"
 // define main as weak symbol, so we can rewrite in test
 __attribute__((weak))
 int main(int argc, const char *argv[]) {
@@ -54,6 +58,9 @@ int main(int argc, const char *argv[]) {
     module_loader->open(input_path.c_str());
     auto module = module_loader->lift();
 
+	auto pm = std::shared_ptr<PassManager>(new PassManager());
+	pm->runPassOn<PrintModulePass>(module.get());
+	/*
     std::unordered_map<Instruction *, size_t> inst2id;
 
     auto getId = [&inst2id](Instruction * inst) -> size_t {
@@ -94,4 +101,5 @@ int main(int argc, const char *argv[]) {
             }
         }
     }
+	*/
 }

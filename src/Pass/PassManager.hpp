@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <map>
 #include <type_traits>
 #include "Utils/Object.hpp"
@@ -21,7 +22,8 @@ public:
 		static_assert(std::is_base_of<FunctionPass, PassT>::value);
 
 		//FIXME: when a function is removed from it's parent(i.e a module), who is responsible to invalid `functionPassCache_`?
-		std::shared_ptr<PassT> newPass = std::shared_ptr(new PassT(target, this));
+		std::shared_ptr<PassT> newPass = std::shared_ptr(new PassT());
+		newPass->initialize(target, this);
 		bool changed = newPass->run();
 
 		if (changed) {
@@ -36,7 +38,8 @@ public:
 		static_assert(std::is_base_of<ModulePass, PassT>::value);
 
 		//FIXME: when a function is removed from it's parent(i.e a module), who is responsible to invalid `functionPassCache_`?
-		std::shared_ptr<PassT> newPass = std::shared_ptr(new PassT(target, this));
+		std::shared_ptr<PassT> newPass = std::shared_ptr<PassT>(new PassT());
+		newPass->initialize(target, this);
 		bool changed = newPass->run();
 		if (changed) {
 			FATAL_UNLESS((std::is_base_of<Transformation, PassT>::value));

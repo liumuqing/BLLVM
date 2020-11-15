@@ -32,7 +32,8 @@ private:
 
 class Pass: virtual public Object {
 public:
-	Pass(PassManager * pm);
+	Pass() {}
+	void initialize(PassManager * pm);
 	virtual ~Pass() = default;
 	virtual PassID getPassId() const = 0;
 	virtual bool run() = 0;
@@ -64,11 +65,14 @@ public:
 	virtual ~Transformation() = default;
 };
 
-template <typename IRUintT> class IRUnitPass: virtual Pass {
+template <typename IRUintT> class IRUnitPass: virtual public Pass {
 public:
-	IRUnitPass(IRUintT * target, PassManager * passManager): Pass(passManager) {
+	IRUnitPass() {}
+	void initialize(IRUintT * target, PassManager * passManager) {
 		FATAL_UNLESS(target);
-		target_ = target->template weak_from_shared<IRUintT>();
+
+		Pass::initialize(passManager);
+		target_ = target->template weak_from_this<IRUintT>();
 	}
 	IRUintT * getTarget() const {
 		FATAL_UNLESS(not target_.expired());
