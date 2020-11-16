@@ -52,7 +52,9 @@ public:
 	virtual PassID getPassId() const override final {
 		return PassID(&ID);
 	}
-    static struct {} ID;
+private:
+	struct DummyType {};
+    static DummyType ID;
 };
 
 class Analysis: virtual public Pass {
@@ -78,6 +80,7 @@ public:
 		FATAL_UNLESS(not target_.expired());
 		auto retv = target_.lock().get();
 		FATAL_UNLESS(retv);
+		return retv;
 	}
 	virtual ~IRUnitPass() = default;
 private:

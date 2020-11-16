@@ -46,4 +46,6 @@ bool PrintModulePass::run() {
             }
         }
     }
+
+	return false;
 }
