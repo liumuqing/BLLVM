@@ -129,8 +129,9 @@ public:
 };
 
 
-class UnaryInstruction: virtual public Instruction {
-};
+class TerminatorInstruction: virtual public Instruction {};
+
+class UnaryInstruction: virtual public Instruction {};
 
 class BinaryInstruction: virtual public Instruction {
     private:
@@ -267,7 +268,9 @@ class LoadInstruction: virtual public InstructionKind<LoadInstruction, LOAD> {};
 class StoreInstruction: virtual public InstructionKind<StoreInstruction, STORE> {};
 
 class PhiInstruction: virtual public InstructionKind<PhiInstruction, PHI> {};
-class UnreachableInstruction: virtual public InstructionKind<UnreachableInstruction, UNREACHABLE> {};
+class UnreachableInstruction:
+	virtual public TerminatorInstruction,
+	virtual public InstructionKind<UnreachableInstruction, UNREACHABLE> {};
 
 class CompareInstruction: virtual public BinaryInstruction {
 public:
@@ -296,6 +299,7 @@ class EqualWithInstruction:
 };
 
 class ReturnInstruction:
+	virtual public TerminatorInstruction,
     virtual public InstructionKind<ReturnInstruction, RETURN> {
 };
 
@@ -311,7 +315,7 @@ class ArithmeticShiftRightInstruction:
     virtual public InstructionKind<ArithmeticShiftRightInstruction, ASR>,
     virtual public BinaryInstruction {
 };
-class BranchInstruction: virtual public Instruction {
+class BranchInstruction: virtual public TerminatorInstruction {
 public:
     virtual bool isCondtional() const = 0;
 };

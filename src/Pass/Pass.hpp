@@ -87,5 +87,15 @@ private:
 	std::weak_ptr<IRUintT> target_;
 };
 
-typedef IRUnitPass<Function> FunctionPass;
-typedef IRUnitPass<Module> ModulePass;
+class FunctionPass: virtual public IRUnitPass<Function> {
+public:
+	Function * getTargetFunction() const {
+		return getTarget();
+	}
+};
+class ModulePass: virtual public IRUnitPass<Module> {
+public:
+	Module * getTargetModule() const {
+		return getTarget();
+	}
+};

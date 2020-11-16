@@ -6,5 +6,5 @@ class PrintModulePass:
 	public PassInfoMixin {
 public:
 	PrintModulePass() {}
-	bool run() override; 
+	bool run() override final;
 };
