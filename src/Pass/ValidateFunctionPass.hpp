@@ -1,9 +1,9 @@
 #include "Pass/Pass.hpp"
 
-class ValidateModulePass:
-	public PassInfoMixin<ValidateModulePass>,
+class ValidateFunctionPass:
+	public PassInfoMixin<ValidateFunctionPass>,
 	virtual public Analysis,
-	virtual public ModulePass{
+	virtual public FunctionPass{
 public:
 	bool run() override final;
 	bool isValidated() const {

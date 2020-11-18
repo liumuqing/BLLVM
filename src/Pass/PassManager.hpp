@@ -24,7 +24,7 @@ public:
         static_assert(std::is_base_of<FunctionPass, PassT>::value);
 
         //FIXME: when a function is removed from it's parent(i.e a module), who is responsible to invalid `functionAnalysisCache_`?
-        std::shared_ptr<PassT> newPass = std::shared_ptr(new PassT());
+        std::shared_ptr<PassT> newPass = std::shared_ptr<PassT>(new PassT());
         newPass->initialize(target, this);
         bool changed = newPass->run();
 
