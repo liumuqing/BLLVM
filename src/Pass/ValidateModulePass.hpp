@@ -1,7 +1,10 @@
 #include "Pass/Pass.hpp"
 #include "IR/Module.hpp"
 
-class ValidateModulePass: virtual public ModulePass {
+class ValidateModulePass:
+	public PassInfoMixin<ValidateModulePass>,
+	virtual public Analysis,
+	virtual public ModulePass{
 public:
 	bool run() override final;
 	bool isValidated() const {

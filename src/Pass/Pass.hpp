@@ -17,14 +17,20 @@ public:
 	explicit PassID(void * value) {
 		value_ = reinterpret_cast<std::uintptr_t>(value);
 	}
-	auto operator== (const PassID& other) {
+	auto operator== (const PassID& other) const {
 		return this->value_ == other.value_;
 	}
-	auto operator< (const PassID& other) {
+	auto operator< (const PassID other) const {
 		return this->value_ < other.value_;
 	}
-	auto operator> (const PassID& other) {
+	auto operator<= (const PassID& other) const {
+		return this->value_ <= other.value_;
+	}
+	auto operator> (const PassID& other) const {
 		return this->value_ > other.value_;
+	}
+	auto operator>= (const PassID& other) const {
+		return this->value_ >= other.value_;
 	}
 private:
 	std::uintptr_t value_;
@@ -46,16 +52,21 @@ protected:
 		return retv;
 	}
 };
-
+template <typename PassT>
 class PassInfoMixin: virtual public Pass {
 public:
 	virtual PassID getPassId() const override final {
-		return PassID(&ID);
+		return PassID(&ID_);
 	}
 private:
 	struct DummyType {};
-    static DummyType ID;
+	//ID_ don't have to be initilized, we just need's it's address to represant the class
+    static DummyType ID_;
+public:
+	static PassID ID;
 };
+template <typename PassT> typename PassInfoMixin<PassT>::DummyType PassInfoMixin<PassT>::ID_;
+template <typename PassT> PassID PassInfoMixin<PassT>::ID(&PassInfoMixin<PassT>::ID_);
 
 class Analysis: virtual public Pass {
 public:
