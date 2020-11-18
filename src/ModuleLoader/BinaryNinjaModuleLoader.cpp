@@ -693,6 +693,9 @@ Function* lift_function(Module * module, BinaryNinja::Ref<BinaryNinja::MediumLev
             //floating instruction are translated to undefined instruction
             DEFINE_OPCODE_INSTRUCTION(MLIL_CEIL, UndefiendInstruction);
             DEFINE_OPCODE_INSTRUCTION(MLIL_FLOOR, UndefiendInstruction);
+            DEFINE_OPCODE_INSTRUCTION(MLIL_FLOAT_TO_INT, UndefiendInstruction);
+            DEFINE_OPCODE_INSTRUCTION(MLIL_INT_TO_FLOAT, UndefiendInstruction);
+            DEFINE_OPCODE_INSTRUCTION(MLIL_ROUND_TO_INT, UndefiendInstruction);
             DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_E, UndefiendInstruction);
             DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_GE, UndefiendInstruction);
             DEFINE_OPCODE_INSTRUCTION(MLIL_FCMP_GT, UndefiendInstruction);
