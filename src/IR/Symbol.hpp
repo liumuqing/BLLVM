@@ -1,31 +1,32 @@
 #pragma once
+
 #include <memory>
 #include <optional>
 
 #include "IR/User.hpp"
 #include "IR/Module.hpp"
+#include "IR/AddressedItem.hpp"
 class Module;
-class ConstantInt:
+class Symbol:
     virtual public Value,
     virtual public WithParentMixin,
     virtual public WithWidthMixin
 {
 
 public:
-    static ConstantInt * create(Module * parent, size_t bitWidth, uint64_t value);
-    ConstantInt(const ConstantInt&) = delete;
-    ConstantInt(ConstantInt&) = delete;
-    uint64_t getUnsignedValue();
+    static Symbol* create(Module * parent, const char * name);
+    Symbol(const Symbol&) = delete;
+    Symbol(Symbol&) = delete;
+	std::string getSymbolName() const;
 
     // override the method, check if parent is set.
     // if so, panic....
-    virtual void setBitWidth(size_t bitWidth) override;
 
 private:
-    uint64_t value_ = 0;
+	std::string symbolName_;
     std::optional<std::weak_ptr<Module>> parent_ = std::nullopt;
 
-    ConstantInt() {};
+    Symbol() {};
 
 friend class Module;
 };
